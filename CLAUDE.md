@@ -1,0 +1,61 @@
+# Kaggle Benchmarking Challenge: instructions for Claude Code
+
+Workspace rules in `../../CLAUDE.md` apply. This file adds what is specific here.
+
+## Start of every session
+
+Read `status.md`, then `BRIEF.md`, then `PLAN.md`. Update `status.md` at every
+milestone and before every break.
+
+## What we are making
+
+A benchmark on Kaggle Benchmarks, run against several real models, plus a DEV
+post about what we found. Deadline Sun 11 Oct 2026 23:59 PDT (Mon 12 Oct 08:59 Malta).
+The deliverable is **insight**, not an app: a small, sharp dataset, a scorer we
+trust, results across models, and a post that teaches something.
+
+## Differences from the Hacktoberfest challenge
+
+- The open-source-AI runtime rule does NOT apply. Closed models are fine to test;
+  the benchmark runs on Kaggle's hosted models.
+- No partner categories. Judging: insights, writing, creativity. Tie-break is
+  reactions, so the post gets shared.
+- No app to host. The public Kaggle benchmark link is mandatory.
+
+## Roles (same as workspace)
+
+- Claude Code: orchestrator. Plan, dataset design, scoring rules, analysis, final say.
+- Codex worker (`../../scripts/codex-worker.sh <dir> "<task>"`, GPT-6 Sol): well-specified
+  pieces: item generation from a written spec, scorer functions, tests, plots.
+- Codex reviewer (`../../scripts/codex-review.sh <dir> "<ask>"`, GPT-6.1 Sol): review the
+  plan before building, audit the dataset for leaks/ambiguity, critique findings and post.
+- Jawad: runs the Kaggle notebook (his account), publishes the benchmark and the post.
+
+## Benchmark rules we hold ourselves to
+
+- Every item has one checkable gold answer, decided before any model is run.
+  Ambiguous items are fixed or dropped, never scored by vibes.
+- Scoring is deterministic Python where possible (exact match, parsing, regex) with
+  pytest tests. LLM-as-judge only if unavoidable, and then validated against hand labels.
+- Dataset is original and synthetic (or properly licensed and credited). No real
+  customer, supplier or employer data. Label synthetic data as such.
+- Keep a held-out split or a frozen version; don't tune items on the models' answers
+  and then report those as findings without saying so.
+- Report what we actually measured: n items, models, dates, settings, failure examples.
+  No numbers in the post that the notebook can't reproduce.
+- Small and sharp beats big and generic: ~100–300 items in one clear capability.
+
+## Layout
+
+- `tasks/`: task source (`kbench` task functions) as plain `.py`, pasted/pushed into Kaggle.
+- `data/`: benchmark items (CSV/JSONL), the generator script, gold answers.
+- `notebooks/`: the Kaggle notebook (.ipynb) we upload.
+- `results/`: exported run dataframes and plots (from Kaggle).
+- `tests/`: pytest for scorers and data validation (runs locally with a fake `llm`).
+- `docs/`: cover image and figures for the post.
+- `.agent/tasks/`, `.agent/reviews/`: worker briefs and reviewer notes (kept as a record).
+
+## Local vs Kaggle
+
+The `kaggle-benchmarks` model proxy is Kaggle-internal, so local runs use a stub LLM
+only. Real model runs happen in the Kaggle notebook. Python 3.9+, `.venv` here.
