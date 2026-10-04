@@ -7,6 +7,12 @@ Workspace rules in `../../CLAUDE.md` apply. This file adds what is specific here
 Read `status.md`, then `BRIEF.md`, then `PLAN.md`. Update `status.md` at every
 milestone and before every break.
 
+## Other work running alongside
+
+The HF26 weekend challenge (Stock Diary) is submitted. The next Hacktoberfest weekly
+challenge has not launched yet; it gets its own folder when it does. Check the
+workspace CLAUDE.md "Challenges" section for what's active.
+
 ## What we are making
 
 A benchmark on Kaggle Benchmarks, run against several real models, plus a DEV

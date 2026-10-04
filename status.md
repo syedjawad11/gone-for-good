@@ -15,10 +15,13 @@ Last updated: Sun 4 Oct 2026, evening Malta. Folder set up; nothing built yet. J
 - No GitHub repo, no Kaggle notebook yet. Kaggle CLI not installed on the Mac.
 
 ## Next (in order)
-1. Pick the benchmark idea with Jawad (PLAN.md lists 3; #1 Roman Urdu shop notes is the lead).
+1. Go through Jawad's ChatGPT idea list with him and pick the benchmark (don't pitch our own first).
 2. Jawad: confirm Kaggle account works, open kaggle.com/benchmarks/tasks/new, note the model list and quotas.
 3. Write the plan (item spec, scoring, models), Sol review, then build.
 
 ## Notes
+- Parallel work: the next Hacktoberfest (HF26) weekly challenge has not launched yet (series hub
+  https://dev.to/challenges/hf26; new ones every Monday in Oct: 5, 12, 19, 26). When it opens, create a new
+  folder for it under challenges/ and plan around both deadlines. Ask Jawad which gets priority.
 - Previous challenge (HF26 Stock Diary) is submitted; its follow-ups live in that folder's status.md
   (share the post; post Hamza's real reaction as a comment after this week's handover).
