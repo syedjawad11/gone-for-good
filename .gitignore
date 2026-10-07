@@ -1,9 +1,9 @@
+*.pyc
+.DS_Store
+.agent/logs/
+.env
+.ipynb_checkpoints/
+.pytest_cache/
 .venv/
 __pycache__/
-*.pyc
-.env
-.DS_Store
-.pytest_cache/
-.ipynb_checkpoints/
-.agent/logs/
 media/
