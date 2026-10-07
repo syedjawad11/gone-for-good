@@ -1,7 +1,8 @@
 # Status: Kaggle Benchmarking Challenge (workspace memory)
 
 Read this first when resuming. Update it at every milestone or break.
-Last updated: Wed 7 Oct 2026 evening, Malta. ON BREAK. Pilot v2 built; local pilot shows a real spread. Nothing running.
+Last updated: Wed 7 Oct 2026 ~18:45 Malta. WORKING. Jawad approved all three next steps (7 Oct).
+Running: gpt-oss-120b pilot v3 in 8 shards (results/local-v3/gpt-oss-shards/); fix workers W11/W12/W13 on held-out.
 
 ## Deadline
 - Submissions close Sun 11 Oct 2026, 23:59 PDT = Mon 12 Oct 06:59 UTC = 08:59 Malta.
@@ -47,7 +48,27 @@ override .env). Fixed by selecting the model in code (scratch runner replaces th
 `gone_for_good.run(kbench.llms[os.environ["GFG_MODEL"]])`). Never trust a run without checking
 the `*.run.json` filename shows the intended model.
 
-## Next (in order) — decide with Jawad first
+## 7 Oct evening session
+- Decisions (Jawad): no silent fix for bare-integer IDs -> prompt now says IDs are strings like "R2" and shows a
+  format-only example (harness/render.py). Items regenerated in Docker; gold byte-identical. gpt-oss: retry locally.
+- gpt-oss failure was APITimeoutError (60 s client timeout), not a param error. Timeout now 300 s (build_task.py).
+- Model Proxy key is SHORT-LIVED (~1-2 h): `.venv/bin/kaggle b auth -y` before every local run. The first
+  v3 attempt failed 401 on every item because of this.
+- Held-out briefs: .agent/tasks/heldout-common.md + W8/W9/W10; panel reviewed (reviews/20261007-183003-panel-*),
+  fixes applied (cp --update=none absent in coreutils 9.1, mv/set -e/xargs/cp -r preconditions, correlated
+  subquery needs non-empty queue, exact-restore evidence via generated hashes / -ef, 6 pairs per worker = 18).
+- Gemini 3 Flash hit the 4096-token cap on R-4A (thinking-out-loud text, no JSON). Consider 8192 for the main run.
+
+- Pilot v3 (4096 cap): Gemini 3 Flash 0.92 pair / 0.96 item; DeepSeek R1 0.75/0.88; Flash-Lite 0.25/0.46;
+  nano 0.08/0.25 (fmt fail 50%->4%); Qwen3-Next 0.00/0.21; granite 0/0 (fmt 46%). 4096 cap TRUNCATED reasoning
+  models (gpt-oss both items, DeepSeek FS-3A, Gemini R-4A) -> MAX_TOKENS now 16384, timeout 600 s.
+- Held-out v1 built (W8/W9/W10): 18 pairs, Docker gold = all hypotheses (.agent/heldout-check/). Blind gpt-5.5
+  (high): 35/36 (missed DB-5A correlated subquery) -> ceiling risk persists for frontier models.
+- Panel on held-out (reviews/20261007-185319-*): 6 pairs admit alternative worlds (FS-8, FS-10B, R-6B, R-7A,
+  R-9A, R-10), DB views hide storage class, shortcut gets 5/18 pairs, hops overstated. Fix round W11/W12/W13
+  (briefs .agent/tasks/heldout-fixes-common.md + W11-13). Then Docker gold, re-audit, FREEZE + commit.
+
+## Next (in order)
 1. Scoring decision: accept bare integers n as "Rn"? Recommendation: NO silent fix; instead make the
    prompt say IDs are strings like "R2" and show an example answer, re-run, and report format errors
    separately (it is itself a finding: small models confuse resource IDs with row IDs).

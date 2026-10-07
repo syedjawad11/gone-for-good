@@ -1,0 +1,6 @@
+FS-10: longest/shortest artifact body chars = 1.014
+FS-5: longest/shortest artifact body chars = 1.002
+FS-6: longest/shortest artifact body chars = 1.000
+FS-7: longest/shortest artifact body chars = 1.057
+FS-8: longest/shortest artifact body chars = 1.000
+FS-9: longest/shortest artifact body chars = 1.000

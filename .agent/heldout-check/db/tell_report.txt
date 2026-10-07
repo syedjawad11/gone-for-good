@@ -1,0 +1,6 @@
+DB-10: longest/shortest artifact body chars = 1.005
+DB-5: longest/shortest artifact body chars = 1.011
+DB-6: longest/shortest artifact body chars = 1.002
+DB-7: longest/shortest artifact body chars = 1.001
+DB-8: longest/shortest artifact body chars = 1.000
+DB-9: longest/shortest artifact body chars = 1.004

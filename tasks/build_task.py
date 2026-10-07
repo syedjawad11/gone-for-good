@@ -14,7 +14,7 @@ def read_jsonl(path):
         return [json.loads(line) for line in handle if line.strip()]
 
 
-def build_task(gold_path, items_path, out_path, name="gone-for-good", max_tokens=4096):
+def build_task(gold_path, items_path, out_path, name="gone-for-good", max_tokens=16384):
     display_name = name
     gold_rows = read_jsonl(gold_path)
     gold = {row["item_id"]: row for row in gold_rows}
@@ -61,7 +61,7 @@ def build_task(gold_path, items_path, out_path, name="gone-for-good", max_tokens
         + "               'max_tokens' if isinstance(llm, OpenAI) else None)\n"
         + "    params = {cap_key: MAX_TOKENS} if cap_key else {}\n"
         + "    if isinstance(llm, OpenAI):\n"
-        + "        params['timeout'] = 60\n"
+        + "        params['timeout'] = 600\n"
         + "    for attempt in range(2):\n"
         + "        try:\n"
         + "            response = llm.prompt(record['item']['prompt'], temperature=0, extra_api_params=params)\n"
@@ -108,7 +108,7 @@ def main():
     parser.add_argument("--items", default="data/items.jsonl")
     parser.add_argument("--out", default="tasks/gone_for_good.py")
     parser.add_argument("--name", default="gone-for-good")
-    parser.add_argument("--max-tokens", type=int, default=4096)
+    parser.add_argument("--max-tokens", type=int, default=16384)
     args = parser.parse_args()
     build_task(args.gold, args.items, args.out, args.name, args.max_tokens)
 

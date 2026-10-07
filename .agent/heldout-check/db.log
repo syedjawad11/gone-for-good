@@ -1,0 +1,33 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 264B done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/python:3.12-slim-bookworm
+#2 DONE 0.1s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 42B done
+#3 DONE 0.0s
+
+#4 [1/3] FROM docker.io/library/python:3.12-slim-bookworm@sha256:34386ef0cb081344d7ec1c103ba398e6e9f64e9ab3a1509accc92a4e24a07258
+#4 resolve docker.io/library/python:3.12-slim-bookworm@sha256:34386ef0cb081344d7ec1c103ba398e6e9f64e9ab3a1509accc92a4e24a07258 done
+#4 DONE 0.0s
+
+#5 [2/3] RUN apt-get update && apt-get install -y --no-install-recommends git sqlite3     && rm -rf /var/lib/apt/lists/*     && useradd --create-home --shell /bin/sh bench
+#5 CACHED
+
+#6 [3/3] WORKDIR /work
+#6 CACHED
+
+#7 exporting to image
+#7 exporting layers done
+#7 exporting manifest sha256:4eb524b065ab467534407716eb601fc754cf222b913c822820947776f3e7a536 done
+#7 exporting config sha256:195d85b8415f083647791a7486fdf6492206a6c97416c159f4e1471da2b9a80b done
+#7 exporting attestation manifest sha256:cffbebce7493eb300e31a817f45bf3c76def0546b728131460506e930e73cc81 done
+#7 exporting manifest list sha256:47faa255dc0fdd715e95b9ca9dc941eb19aea7b215a3d32a360130f481f0c99d done
+#7 naming to docker.io/library/gone-for-good-harness:latest
+#7 naming to docker.io/library/gone-for-good-harness:latest done
+#7 unpacking to docker.io/library/gone-for-good-harness:latest done
+#7 DONE 0.0s

@@ -1,0 +1,6 @@
+R-10: longest/shortest artifact body chars = 1.003
+R-5: longest/shortest artifact body chars = 1.016
+R-6: longest/shortest artifact body chars = 1.001
+R-7: longest/shortest artifact body chars = 1.001
+R-8: longest/shortest artifact body chars = 1.105
+R-9: longest/shortest artifact body chars = 1.006

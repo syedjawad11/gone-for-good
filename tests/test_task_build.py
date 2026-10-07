@@ -82,7 +82,7 @@ def test_generated_task_compiles_and_runs(tmp_path, monkeypatch, capsys):
         assert ns["gone_for_good"].result == expected
         assert len(llm.calls) == 6
         assert all(call["temperature"] == 0 and
-                   call["extra_api_params"] == {"max_tokens": 4096, "timeout": 60} for call in llm.calls)
+                   call["extra_api_params"] == {"max_tokens": 16384, "timeout": 600} for call in llm.calls)
         lines = capsys.readouterr().out.splitlines()
         assert len([line for line in lines if line.startswith("GFG_ITEM ")]) == 6
         assert len([line for line in lines if line.startswith("GFG_AGGREGATE ")]) == 1

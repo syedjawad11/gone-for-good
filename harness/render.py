@@ -28,6 +28,8 @@ def render_prompt(pair: Pair, variant_artifacts: list[Artifact], tool_versions: 
         '- "recoverable": the subset of "lost" that the restore script above brings back with exactly the',
         '  original content. Judge only this script, not other ways you might recover data.',
         '- "permanent_loss": true if any lost resource is not recoverable.',
-        'Use only the resource IDs listed above. Use [] for an empty list.',
+        'Use only the resource IDs listed above, written as strings exactly as listed (for example "R2", not 2).',
+        'Use [] for an empty list. Example of the format only (not a hint about this case):',
+        '{"lost": ["R1", "R4"], "recoverable": ["R4"], "permanent_loss": true}',
     ))
     return "\n".join(parts) + "\n"
