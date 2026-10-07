@@ -29,8 +29,11 @@ Last updated: Wed 7 Oct 2026 afternoon, Malta. Pilot built + gold frozen-candida
 1. Fix code-review P1/P2s and red-team "breaks" (W6 worker), regenerate gold.
 2. Kaggle pilot on 3 models (needs login) BEFORE hardening: tells us whether Kaggle's models spread out.
 3. If at ceiling: harden held-out set (more hops, noise, counterbalanced cues, permuted IDs).
-4. Jawad: `cd challenges/kaggle-benchmarking-2026 && .venv/bin/kaggle auth login` (browser OAuth).
-   Then I run `kaggle b init -y`, `kaggle b t models`, `kaggle b quota`, push + pilot on 3 models.
+- Kaggle: Jawad logged in 7 Oct. `kaggle b init` done (.env, gitignored). 46 models on Kaggle;
+  8 callable locally (LLMS_AVAILABLE in .env). One real call verified (gemini-3.1-flash-lite: "OK").
+  No inference quota shown by the CLI (only GPU/TPU hours). W6 (code fixes) + W7 (fixture fixes) running.
+- Planned pilot models: gemini-3.1-flash-lite-preview (small, Google), gpt-oss-120b (open-weight),
+  claude-sonnet-5-default (large, Anthropic).
 
 ## Notes
 - HF26 week-2 challenge skipped this week (Jawad's call, 7 Oct).
