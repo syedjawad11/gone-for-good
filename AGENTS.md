@@ -16,6 +16,8 @@ Project rules:
 - Scorers are deterministic Python with pytest tests. No model calls in
   scorers unless the plan says so explicitly.
 - Data is original and synthetic. No real customer, supplier, or employer data.
+- For kbench task code, read `.claude/skills/write-kaggle-benchmarks/SKILL.md` and the installed
+  package source in `.venv/lib/python3.12/site-packages/kaggle_benchmarks/`.
 - Task code targets the `kaggle_benchmarks` API (`@kbench.task`, first arg
   `llm`, `llm.prompt`, `kbench.assertions.*`). Locally, test with a stub LLM;
   never assume a real model is reachable.

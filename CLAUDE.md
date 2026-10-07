@@ -28,14 +28,12 @@ trust, results across models, and a post that teaches something.
   reactions, so the post gets shared.
 - No app to host. The public Kaggle benchmark link is mandatory.
 
-## Roles (same as workspace)
+## Roles
 
-- Claude Code: orchestrator. Plan, dataset design, scoring rules, analysis, final say.
-- Codex worker (`../../scripts/codex-worker.sh <dir> "<task>"`, GPT-6 Sol): well-specified
-  pieces: item generation from a written spec, scorer functions, tests, plots.
-- Codex reviewer (`../../scripts/codex-review.sh <dir> "<ask>"`, GPT-6.1 Sol): review the
-  plan before building, audit the dataset for leaks/ambiguity, critique findings and post.
-- Jawad: runs the Kaggle notebook (his account), publishes the benchmark and the post.
+See the workspace CLAUDE.md roles table and this folder's PLAN.md "Team". In short:
+Claude orchestrates; gpt-6-sol builds; gpt-6.1-sol + gpt-5.5 (+ gpt-6-astra red team)
+review via `../../scripts/codex-panel.sh`. Jawad owns the Kaggle account, publishes the
+task and the post.
 
 ## Benchmark rules we hold ourselves to
 
@@ -53,9 +51,11 @@ trust, results across models, and a post that teaches something.
 
 ## Layout
 
-- `tasks/`: task source (`kbench` task functions) as plain `.py`, pasted/pushed into Kaggle.
-- `data/`: benchmark items (CSV/JSONL), the generator script, gold answers.
-- `notebooks/`: the Kaggle notebook (.ipynb) we upload.
+- `fixtures/`: one module per matched pair (contract in `fixtures/base.py`).
+- `harness/`: executes fixtures in Docker and writes `data/gold.jsonl`, `data/items.jsonl`.
+- `scoring.py`: deterministic scorer + frozen baselines.
+- `tasks/`: `build_task.py` generates the self-contained Kaggle task file `gone_for_good.py`.
+- `data/`: gold and rendered items (generated; frozen before model runs).
 - `results/`: exported run dataframes and plots (from Kaggle).
 - `tests/`: pytest for scorers and data validation (runs locally with a fake `llm`).
 - `docs/`: cover image and figures for the post.
@@ -63,5 +63,7 @@ trust, results across models, and a post that teaches something.
 
 ## Local vs Kaggle
 
-The `kaggle-benchmarks` model proxy is Kaggle-internal, so local runs use a stub LLM
-only. Real model runs happen in the Kaggle notebook. Python 3.9+, `.venv` here.
+Kaggle CLI 2.2.4 + kaggle-benchmarks are in `.venv`. Once Jawad has logged in
+(`kaggle auth login`), `kaggle b init -y` writes Model Proxy creds to `.env` (gitignored)
+and tasks are pushed/run/downloaded from here: see `.claude/skills/write-kaggle-benchmarks/`.
+Gold is generated in Docker (`harness/run_in_docker.sh`), never on macOS.
