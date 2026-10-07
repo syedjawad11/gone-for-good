@@ -22,8 +22,7 @@ def build(root: Path, null_user_id: bool) -> None:
         con.executemany("INSERT INTO active_sessions VALUES (?, ?, ?)", [
             (21, 2, "2026-02-01"),
             (22, 5, "2026-02-02"),
-            (23, None if null_user_id else 2,
-             "2026-02-03" if null_user_id else None),
+            (23, None if null_user_id else 2, None),
         ])
         con.execute("INSERT INTO users_snapshot SELECT * FROM users WHERE id BETWEEN 1 AND 4")
         con.execute("INSERT INTO settings VALUES (1, 'session_window', '30 days')")
@@ -43,11 +42,11 @@ def artifacts(root: Path):
 
 PAIR = Pair(
     pair_id="DB-4", family="db",
-    changed_fact="session row 23 has NULL in user_id or ended_at",
+    changed_fact="session row 23 has NULL or 2 in user_id",
     operation='sqlite3 -bail app.db "PRAGMA foreign_keys=ON; BEGIN; DELETE FROM users WHERE id NOT IN (SELECT user_id FROM active_sessions); COMMIT;"',
     restore_script='sqlite3 app.db "INSERT OR IGNORE INTO users SELECT * FROM users_snapshot;" || true',
     inventory=[
-        Resource("R1", "active users rows 2 and 5", sqlite_fp("app.db", "SELECT * FROM users WHERE id IN (2,5) ORDER BY id")),
+        Resource("R1", "users rows 2, 5", sqlite_fp("app.db", "SELECT * FROM users WHERE id IN (2,5) ORDER BY id")),
         Resource("R2", "users rows 6-8", sqlite_fp("app.db", "SELECT * FROM users WHERE id IN (6,7,8) ORDER BY id")),
         Resource("R3", "session rows 21-22", sqlite_fp("app.db", "SELECT * FROM active_sessions WHERE id IN (21,22) ORDER BY id")),
         Resource("R4", "users rows 1, 3-4", sqlite_fp("app.db", "SELECT * FROM users WHERE id IN (1,3,4) ORDER BY id")),

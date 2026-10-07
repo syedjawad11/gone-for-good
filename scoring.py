@@ -125,8 +125,28 @@ def _summary(rows):
     }
 
 
-def aggregate(rows):
+def aggregate(rows, expected_items=None):
     rows = list(rows)
+    seen = set()
+    for row in rows:
+        if row["item_id"] in seen:
+            raise ValueError("duplicate item_id: " + row["item_id"])
+        seen.add(row["item_id"])
+    if expected_items is not None:
+        expected = list(expected_items)
+        expected_ids = set()
+        for gold in expected:
+            item_id = gold["item_id"]
+            if item_id in expected_ids:
+                raise ValueError("duplicate expected item_id: " + item_id)
+            expected_ids.add(item_id)
+        if seen - expected_ids:
+            raise ValueError("unexpected item IDs: " + repr(sorted(seen - expected_ids)))
+        for gold in expected:
+            if gold["item_id"] not in seen:
+                missing = score_item("", gold)
+                missing["format_error"] = "missing"
+                rows.append(missing)
     result = _summary(rows)
     for field, output in (("family", "by_family"), ("hops", "by_hops")):
         groups = defaultdict(list)
@@ -149,15 +169,23 @@ def _percentile(values, fraction):
 
 
 def bootstrap(rows_by_model, n_boot=2000, seed=0):
-    """Paired, pair-cluster bootstrap. All models must cover identical pair IDs."""
+    """Paired, pair-cluster bootstrap. All models must cover identical items."""
     grouped = {}
+    item_sets = {}
     for model, rows in rows_by_model.items():
         pairs = defaultdict(list)
+        seen = set()
         for row in rows:
+            if row["item_id"] in seen:
+                raise ValueError("duplicate item_id: " + row["item_id"])
+            seen.add(row["item_id"])
             pairs[row["pair_id"]].append(row)
         grouped[model] = pairs
+        item_sets[model] = seen
     models = list(grouped)
     ids = sorted(grouped[models[0]]) if models else []
+    if any(item_sets[m] != item_sets[models[0]] for m in models):
+        raise ValueError("models must contain the same item IDs")
     if any(set(grouped[m]) != set(ids) for m in models):
         raise ValueError("models must contain the same pair IDs")
     draws = {m: {"pair_acc": [], "item_acc": []} for m in models}
@@ -215,6 +243,7 @@ def main():
         for answer in _read_jsonl(args.answers):
             answers[answer["model"]][answer["item_id"]] = answer["response"]
     summaries = {}
+    answer_rows = {}
     names = list(answers) + ["everything_lost", "nothing_lost", "naive_reader"]
     print("model item_acc pair_acc lost_acc rec_acc format_fail missed_permanent")
     for name in names:
@@ -228,12 +257,20 @@ def main():
             if response is None:
                 row["format_error"] = "missing"
             rows.append(row)
-        summaries[name] = aggregate(rows)
+        summaries[name] = aggregate(rows, expected_items=gold)
+        if name in answers:
+            answer_rows[name] = rows
         s = summaries[name]
         mp = s["missed_permanent"]
         print("{} {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {}/{}".format(
             name, s["item_acc"], s["pair_acc"], s["lost_acc"], s["rec_acc"],
             s["format_failure_rate"], mp["k"], mp["of"]))
+    if answer_rows:
+        intervals = bootstrap(answer_rows)
+        summaries["bootstrap"] = intervals
+        for name in answer_rows:
+            low, high = intervals["models"][name]["pair_acc"]
+            print("{} pair_acc 95% CI [{:.3f}, {:.3f}]".format(name, low, high))
     output = Path("results/scores.json")
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(summaries, indent=2, sort_keys=True) + "\n", encoding="utf-8")

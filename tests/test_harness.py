@@ -47,3 +47,15 @@ def test_missing_before_fingerprint() -> None:
     pair = replace(PAIR, inventory=PAIR.inventory + [missing])
     with pytest.raises(ValueError, match="DEMO-1A: R4 fingerprint is None before operation"):
         execute_variant(pair, PAIR.variants[0], {"bash": "bash", "coreutils": "rm", "git": "git", "sqlite": "sqlite"})
+
+
+def test_prompt_shell_context_and_allocation_total_filter() -> None:
+    artifacts = lambda root: [Artifact("$ ls -la sample", "total 8\n-rw-r--r-- 1 user group 1 Jan 1 2026 file\n")]
+    variant = replace(PAIR.variants[0], artifacts=artifacts)
+    _, item, _, _ = execute_variant(PAIR, variant, {"bash": "bash", "coreutils": "coreutils", "git": "git", "sqlite": "3.40"})
+    prompt = item["prompt"]
+    assert "total 8" not in prompt
+    assert "-rw-r--r--" in prompt
+    assert "fresh bash process (no startup files, default shell options, a clean environment" in prompt
+    assert "The restore script then runs the same way, in a new bash process" in prompt
+    assert "=== Restore script (run afterwards in a new bash process) ===" in prompt

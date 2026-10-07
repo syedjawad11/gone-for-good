@@ -47,6 +47,8 @@ def _artifacts(root: Path) -> list[Artifact]:
     commands = [
         ("$ cat bin/purge_region", "cat bin/purge_region"),
         ("$ cat config/sync.env", "cat config/sync.env"),
+        ("$ sqlite3 primary.db .schema", "sqlite3 primary.db .schema"),
+        ("$ sqlite3 replica.db .schema", "sqlite3 replica.db .schema"),
         ('$ sqlite3 -header -column primary.db "SELECT * FROM accounts ORDER BY id"',
          'sqlite3 -header -column primary.db "SELECT * FROM accounts ORDER BY id"'),
         ('$ sqlite3 -header -column replica.db "SELECT * FROM accounts ORDER BY id"',

@@ -84,3 +84,6 @@ Research (Sonnet subagent, `docs/sources.md`): positioning holds; two hook facts
   (`kaggle b ...`) replaces notebook-only runs if Jawad's login works.
 - 7 Oct: panel review accepted (see above). Held-out cut further to 18–24 pairs, models 6–8.
   Workers W1 harness, W2 fs, W3 db, W4 recovery, W5 scorer+task launched in parallel.
+- 7 Oct evening: W6/W7 fixes merged. Local pilot v2 on 6 models gives a real spread (Gemini 3 Flash 100%
+  pair acc down to 0–17% for small models), so the benchmark is NOT flat overall, but frontier models are at
+  ceiling on the pilot. Held-out set to be made harder. Open: integer-ID format failures, gpt-oss api errors.

@@ -50,8 +50,8 @@ PAIR = Pair(
     ],
     literal_targets=[],
     variants=[
-        Variant("A", lambda root: _build(root, "SUBDIR=tmp"), _artifacts, 2),
-        Variant("B", lambda root: _build(root, "SUBDR=tmp"), _artifacts, 2),
+        Variant("A", lambda root: _build(root, "SUBDIR=tmp\nSUBDR_MODE=fast"), _artifacts, 2),
+        Variant("B", lambda root: _build(root, "SUBDR=tmp\nSUBDIR_MODE=fast"), _artifacts, 2),
     ],
     expected={
         "A": {"lost": ["R2", "R8"], "recoverable": []},

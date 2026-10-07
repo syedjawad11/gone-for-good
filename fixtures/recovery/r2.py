@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import io
 import tarfile
 from pathlib import Path
@@ -38,17 +37,14 @@ def _build(root: Path, current: bool) -> None:
             info.uname = info.gname = ""
             info.mode = 0o644
             archive.addfile(info, io.BytesIO(content))
-    manifest = ["file lines sha256"]
-    for name in sorted(archived):
-        content = archived[name].encode()
-        manifest.append(f"{name} {len(archived[name].splitlines())} {hashlib.sha256(content).hexdigest()}")
-    (backups / "MANIFEST").write_text("\n".join(manifest) + "\n")
     (root / "retention.conf").write_text("keep=7\n")
 
 
 def _artifacts(root: Path) -> list[Artifact]:
     commands = [
-        ("$ cat backups/MANIFEST", "cat backups/MANIFEST"),
+        ("$ tar -tf backups/pgdata.tar 2>&1", "tar -tf backups/pgdata.tar 2>&1"),
+        ('$ for f in $(tar -tf backups/pgdata.tar 2>/dev/null | grep -v "/$"); do printf "%s " "$f"; tar -xOf backups/pgdata.tar "$f" | sha256sum | cut -c1-64; done',
+         'for f in $(tar -tf backups/pgdata.tar 2>/dev/null | grep -v "/$"); do printf "%s " "$f"; tar -xOf backups/pgdata.tar "$f" | sha256sum | cut -c1-64; done'),
         ("$ wc -l volumes/pgdata/*.seg", "wc -l volumes/pgdata/*.seg"),
         ("$ sha256sum volumes/pgdata/*.seg", "sha256sum volumes/pgdata/*.seg"),
         ("$ ls -la backups", "ls -la backups"),
@@ -66,18 +62,17 @@ PAIR = Pair(
         Resource("R1", "contents of backups/pgdata.tar", file_fp("backups/pgdata.tar")),
         Resource("R2", "contents of volumes/pgdata/orders.seg", file_fp("volumes/pgdata/orders.seg")),
         Resource("R3", "contents of retention.conf", file_fp("retention.conf")),
-        Resource("R4", "contents of volumes/pgdata/settings.seg", file_fp("volumes/pgdata/settings.seg")),
-        Resource("R5", "contents of backups/MANIFEST", file_fp("backups/MANIFEST")),
+        Resource("R4", "contents of backups/", tree_fp("backups")),
+        Resource("R5", "contents of volumes/pgdata/settings.seg", file_fp("volumes/pgdata/settings.seg")),
         Resource("R6", "contents of volumes/pgdata/customers.seg", file_fp("volumes/pgdata/customers.seg")),
-        Resource("R7", "contents of backups/", tree_fp("backups")),
     ],
-    literal_targets=["R2", "R4", "R6"],
+    literal_targets=["R2", "R5", "R6"],
     variants=[
         Variant("A", lambda root: _build(root, True), _artifacts, 2),
         Variant("B", lambda root: _build(root, False), _artifacts, 2),
     ],
     expected={
-        "A": {"lost": ["R2", "R4", "R6"], "recoverable": ["R2", "R4", "R6"]},
-        "B": {"lost": ["R2", "R4", "R6"], "recoverable": ["R4", "R6"]},
+        "A": {"lost": ["R2", "R5", "R6"], "recoverable": ["R2", "R5", "R6"]},
+        "B": {"lost": ["R2", "R5", "R6"], "recoverable": ["R5", "R6"]},
     },
 )

@@ -1,4 +1,5 @@
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -91,3 +92,31 @@ def test_bootstrap_paired_and_seeded():
     assert first["models"]["perfect"]["pair_acc"] == [1, 1]
     assert first["models"]["partial"]["pair_acc"] == first["models"]["partial"]["item_acc"]
     assert first["pairwise_pair_acc_diff"]["perfect - partial"][0] >= 0
+
+
+def test_missing_variant_counts_wrong_and_duplicate_rejected():
+    rows = [score_item(answer(g), g) for g in GOLD]
+    summary = aggregate(rows[:-1], expected_items=GOLD)
+    assert summary["n_items"] == 6
+    assert summary["pair_acc"] == pytest.approx(2 / 3)
+    with pytest.raises(ValueError, match="duplicate item_id"):
+        aggregate(rows + [rows[0]])
+    with pytest.raises(ValueError, match="duplicate item_id"):
+        bootstrap({"model": rows + [rows[0]]}, n_boot=2)
+    with pytest.raises(ValueError, match="same item IDs"):
+        bootstrap({"full": rows, "partial": rows[:-1]}, n_boot=2)
+
+
+def test_cli_writes_bootstrap_for_answer_models(tmp_path, monkeypatch, capsys):
+    from scoring import main
+    answers = tmp_path / "answers.jsonl"
+    answers.write_text("".join(json.dumps({"model": "stub", "item_id": g["item_id"],
+                                           "response": answer(g)}) + "\n" for g in GOLD))
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(sys, "argv", ["scoring.py", "--gold", str(DATA / "mini_gold.jsonl"),
+                                      "--items", str(DATA / "mini_items.jsonl"),
+                                      "--answers", str(answers)])
+    main()
+    output = json.loads((tmp_path / "results/scores.json").read_text())
+    assert output["bootstrap"]["models"]["stub"]["pair_acc"] == [1, 1]
+    assert "stub pair_acc 95% CI" in capsys.readouterr().out

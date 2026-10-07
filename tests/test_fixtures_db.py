@@ -102,10 +102,14 @@ def test_db2_archive_targets(tmp_path):
 
 
 def test_db4_null_is_in_only_one_subquery_column(tmp_path):
+    ended_at_by_variant = []
     for variant in db4.PAIR.variants:
         root = tmp_path / variant.variant
         root.mkdir()
         variant.build(root)
         sessions = all_rows(root)["active_sessions"]
         assert sum(row[1] is None for row in sessions) == (variant.variant == "B")
-        assert sum(row[2] is None for row in sessions) == (variant.variant == "A")
+        assert sum(row[2] is None for row in sessions) == 1
+        ended_at_by_variant.append([row[2] for row in sessions])
+    assert ended_at_by_variant[0] == ended_at_by_variant[1]
+    assert db4.PAIR.inventory[0].label == "users rows 2, 5"

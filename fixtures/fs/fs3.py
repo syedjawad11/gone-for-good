@@ -11,18 +11,16 @@ def _build(root: Path, backup_is_link: bool) -> None:
     (root / "reports/q1.csv").write_text("quarter,total\n1,14\n")
     (root / "reports/q2.csv").write_text("quarter,total\n2,18\n")
     (root / "reports/q3.csv").write_text("quarter,total\n3,21\n")
+    os.link(root / "reports/q2.csv", root / "backup/q2.csv")
+    (root / "reports/latest.csv").symlink_to("q2.csv")
     if backup_is_link:
         (root / "backup/q3.csv").symlink_to("../reports/q3.csv")
-        os.link(root / "reports/q2.csv", root / "backup/q2.csv")
-        (root / "reports/latest.csv").write_bytes((root / "reports/q2.csv").read_bytes())
     else:
         os.link(root / "reports/q3.csv", root / "backup/q3.csv")
-        (root / "backup/q2.csv").write_bytes((root / "reports/q2.csv").read_bytes())
-        (root / "reports/latest.csv").symlink_to("q2.csv")
 
 
 def _artifacts(root: Path):
-    commands = ("ls -la reports", "ls -la backup")
+    commands = ("ls -la reports", "ls -la backup", "sha256sum reports/*.csv backup/*")
     return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
 
 

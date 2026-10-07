@@ -43,6 +43,8 @@ def _artifacts(root: Path):
         "ls -la uploads",
         "ls -la store",
         "tar -tf exports/archive.tar",
+        "sha256sum store/archive/2024.csv store/archive/2025.csv",
+        "tar -xOf exports/archive.tar store/archive/2024.csv | sha256sum",
         "ls -la",
     )
     return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]

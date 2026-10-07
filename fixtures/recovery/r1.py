@@ -45,10 +45,8 @@ def _build(root: Path, embedded: bool) -> None:
         "# The backup job stores exact copies of the segment files listed in the archive.\n"
     )
     _archive(root / backup, SEGMENTS)
-    if embedded:
-        _archive(root / "backups/config.tar", {"config/retention.conf": "retention=7\n"})
-    else:
-        _archive(root / "volumes/pgdata/.snapshots/wal-old.tar", {"wal/0001": "checkpoint\n"})
+    _archive(root / "backups/config.tar", {"config/retention.conf": "retention=7\n"})
+    _archive(root / "volumes/pgdata/.snapshots/wal-old.tar", {"wal/0001": "checkpoint\n"})
     (root / "notes.txt").write_text("Volume inventory reviewed weekly.\n")
 
 
@@ -76,21 +74,21 @@ PAIR = Pair(
     operation="rm -rf volumes/pgdata",
     restore_script='source ./backup.conf\n[ -f "$BACKUP_FILE" ] && tar -xf "$BACKUP_FILE" -C volumes || true',
     inventory=[
-        Resource("R1", "contents of backup.conf", file_fp("backup.conf")),
-        Resource("R2", "contents of volumes/pgdata/base/16384/orders.seg", file_fp("volumes/pgdata/base/16384/orders.seg")),
-        Resource("R3", "contents of configured backup archive", _configured_backup_fp),
-        Resource("R4", "contents of volumes/pgdata/global/settings.seg", file_fp("volumes/pgdata/global/settings.seg")),
-        Resource("R5", "contents of backups/", tree_fp("backups")),
-        Resource("R6", "contents of volumes/pgdata/base/16384/customers.seg", file_fp("volumes/pgdata/base/16384/customers.seg")),
+        Resource("R1", "contents of volumes/pgdata/base/16384/orders.seg", file_fp("volumes/pgdata/base/16384/orders.seg")),
+        Resource("R2", "contents of backup.conf", file_fp("backup.conf")),
+        Resource("R3", "contents of volumes/pgdata/global/settings.seg", file_fp("volumes/pgdata/global/settings.seg")),
+        Resource("R4", "contents of backups/", tree_fp("backups")),
+        Resource("R5", "contents of volumes/pgdata/base/16384/customers.seg", file_fp("volumes/pgdata/base/16384/customers.seg")),
+        Resource("R6", "contents of configured backup archive", _configured_backup_fp),
         Resource("R7", "contents of notes.txt", file_fp("notes.txt")),
     ],
-    literal_targets=["R2", "R3", "R4", "R6"],
+    literal_targets=["R1", "R3", "R5", "R6"],
     variants=[
         Variant("A", lambda root: _build(root, False), _artifacts, 2),
         Variant("B", lambda root: _build(root, True), _artifacts, 2),
     ],
     expected={
-        "A": {"lost": ["R2", "R4", "R6"], "recoverable": ["R2", "R4", "R6"]},
-        "B": {"lost": ["R2", "R3", "R4", "R6"], "recoverable": []},
+        "A": {"lost": ["R1", "R3", "R5"], "recoverable": ["R1", "R3", "R5"]},
+        "B": {"lost": ["R1", "R3", "R5", "R6"], "recoverable": []},
     },
 )

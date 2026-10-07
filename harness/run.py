@@ -17,7 +17,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from fixtures.base import home_for, FIXED_EPOCH, Pair, Variant, env_for
+from fixtures.base import home_for, FIXED_EPOCH, Artifact, Pair, Variant, env_for
 from harness.render import render_prompt
 
 
@@ -135,6 +135,10 @@ def execute_variant(pair: Pair, variant: Variant, versions: dict[str, str]) -> t
         variant.build(root)
         set_fixed_mtimes(root)
         artifacts = variant.artifacts(root)
+        # Directory allocation totals vary with filesystem layout and leak size cues.
+        artifacts = [Artifact(a.title, "\n".join(line for line in a.body.split("\n")
+                                            if not re.fullmatch(r"total \d+", line)))
+                     for a in artifacts]
         before = {r.id: r.fingerprint(root) for r in pair.inventory}
         for resource_id, fingerprint in before.items():
             if fingerprint is None:

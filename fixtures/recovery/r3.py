@@ -51,8 +51,12 @@ def _artifacts(root: Path) -> list[Artifact]:
         ("$ ls -la backups", "ls -la backups"),
         ("$ ls -laR volumes", "ls -laR volumes"),
         ("$ cat bin/README", "cat bin/README"),
+        ("$ tar -tf backups/pgdata.tar 2>&1", "tar -tf backups/pgdata.tar 2>&1"),
+        ('$ for f in $(tar -tf backups/pgdata.tar 2>/dev/null | grep -v "/$"); do printf "%s " "$f"; tar -xOf backups/pgdata.tar "$f" | sha256sum | cut -c1-64; done',
+         'for f in $(tar -tf backups/pgdata.tar 2>/dev/null | grep -v "/$"); do printf "%s " "$f"; tar -xOf backups/pgdata.tar "$f" | sha256sum | cut -c1-64; done'),
+        ("$ sha256sum volumes/pgdata/*.seg", "sha256sum volumes/pgdata/*.seg"),
     ]
-    return [Artifact(title, sh(root, command).stdout) for title, command in commands]
+    return [Artifact(title, sh(root, command, check=False).stdout) for title, command in commands]
 
 
 PAIR = Pair(
@@ -63,20 +67,20 @@ PAIR = Pair(
     restore_script="[ -s backups/pgdata.tar ] && tar -xf backups/pgdata.tar -C volumes || true",
     inventory=[
         Resource("R1", "contents of backups/.keep", file_fp("backups/.keep")),
-        Resource("R2", "contents of volumes/pgdata/orders.seg", file_fp("volumes/pgdata/orders.seg")),
-        Resource("R3", "contents of bin/README", file_fp("bin/README")),
+        Resource("R2", "contents of bin/README", file_fp("bin/README")),
+        Resource("R3", "contents of volumes/pgdata/orders.seg", file_fp("volumes/pgdata/orders.seg")),
         Resource("R4", "contents of volumes/pgdata/settings.seg", file_fp("volumes/pgdata/settings.seg")),
         Resource("R5", "contents of backups/pgdata.tar", file_fp("backups/pgdata.tar")),
         Resource("R6", "contents of volumes/pgdata/customers.seg", file_fp("volumes/pgdata/customers.seg")),
         Resource("R7", "contents of backups/", tree_fp("backups")),
     ],
-    literal_targets=["R2", "R4", "R6"],
+    literal_targets=["R3", "R4", "R6"],
     variants=[
         Variant("A", lambda root: _build(root, True), _artifacts, 2),
         Variant("B", lambda root: _build(root, False), _artifacts, 2),
     ],
     expected={
-        "A": {"lost": ["R2", "R4", "R6"], "recoverable": ["R2", "R4", "R6"]},
-        "B": {"lost": ["R2", "R4", "R6"], "recoverable": []},
+        "A": {"lost": ["R3", "R4", "R6"], "recoverable": ["R3", "R4", "R6"]},
+        "B": {"lost": ["R3", "R4", "R6"], "recoverable": []},
     },
 )

@@ -38,7 +38,12 @@ def test_variants_execute_and_match_expected(pair, tmp_path):
         titles.append([artifact.title for artifact in artifacts])
         assert artifacts
         for artifact in artifacts:
-            assert artifact.body.strip(), (pair.pair_id, variant.variant, artifact.title)
+            if pair.pair_id == "R-3" and variant.variant == "B" and "for f in $(tar -tf" in artifact.title:
+                assert artifact.body == ""
+            elif pair.pair_id == "R-3" and variant.variant == "B" and artifact.title.startswith("$ tar -tf"):
+                pass  # An empty tar prints nothing on bsdtar and an error on GNU tar.
+            else:
+                assert artifact.body.strip(), (pair.pair_id, variant.variant, artifact.title)
             assert not FORBIDDEN.search(artifact.title + "\n" + artifact.body)
             assert not re.search(r"\bvariant [AB]\b", artifact.title + "\n" + artifact.body, re.IGNORECASE)
 
@@ -86,3 +91,49 @@ def test_archive_bytes_and_headers_are_deterministic(pair, tmp_path):
                     assert all(member.uid == member.gid == 0 for member in members)
                     assert all(member.uname == member.gname == "" for member in members)
         assert copies[0] == copies[1]
+
+
+def test_recovery_inventory_lost_ids_are_permuted():
+    lost_sets = [set(pair.expected["A"]["lost"]) for pair in PAIRS[:3]]
+    assert len({frozenset(ids) for ids in lost_sets}) == 3
+
+
+def test_r1_both_distractor_archives_exist(tmp_path):
+    for variant in PAIRS[0].variants:
+        root = tmp_path / variant.variant
+        root.mkdir()
+        variant.build(root)
+        assert (root / "backups/config.tar").is_file()
+        assert (root / "volumes/pgdata/.snapshots/wal-old.tar").is_file()
+
+
+@pytest.mark.parametrize("pair", PAIRS[1:3], ids=lambda pair: pair.pair_id)
+def test_archive_hash_evidence_is_from_tar(pair, tmp_path):
+    for variant in pair.variants:
+        root = tmp_path / variant.variant
+        root.mkdir()
+        variant.build(root)
+        artifacts = {artifact.title: artifact.body for artifact in variant.artifacts(root)}
+        member_title = next(title for title in artifacts if title.startswith("$ for f in $(tar -tf"))
+        member_hashes = {line.split()[0]: line.split()[1] for line in artifacts[member_title].splitlines()}
+        live_title = "$ sha256sum volumes/pgdata/*.seg"
+        live_hashes = {line.split()[1].replace("volumes/", ""): line.split()[0]
+                       for line in artifacts[live_title].splitlines()}
+        if pair.pair_id == "R-3" and variant.variant == "B":
+            assert member_hashes == {}
+        else:
+            for name, digest in member_hashes.items():
+                if name in live_hashes:
+                    assert (digest == live_hashes[name]) == (
+                        pair.pair_id == "R-3" or variant.variant == "A" or name != "pgdata/orders.seg"
+                    )
+
+
+def test_r4_shows_both_schemas(tmp_path):
+    for variant in PAIRS[3].variants:
+        root = tmp_path / variant.variant
+        root.mkdir()
+        variant.build(root)
+        artifacts = {artifact.title: artifact.body for artifact in variant.artifacts(root)}
+        for database in ("primary", "replica"):
+            assert "CREATE TABLE accounts" in artifacts[f"$ sqlite3 {database}.db .schema"]

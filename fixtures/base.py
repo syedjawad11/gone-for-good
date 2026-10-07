@@ -86,7 +86,7 @@ def sh(root: Path, script: str, check: bool = True) -> subprocess.CompletedProce
     """Run a bash script with cwd=root and the pinned env. Used by build/restore/artifacts."""
     return subprocess.run(
         ["bash", "-c", script], cwd=str(root), env=env_for(root),
-        capture_output=True, text=True, check=check,
+        capture_output=True, text=True, check=check, timeout=60,
     )
 
 
@@ -113,22 +113,29 @@ def link_fp(rel: str) -> Callable[[Path], Optional[str]]:
 
 
 def tree_fp(rel: str) -> Callable[[Path], Optional[str]]:
-    """Hash of a directory tree: relative paths + file contents (does not follow symlinked dirs).
-    None if the directory is missing or empty."""
+    """Hash typed, length-prefixed entries without following symlinked directories."""
     def fp(root: Path) -> Optional[str]:
         base = root / rel
         if not base.is_dir() or base.is_symlink():
             return None
         h = hashlib.sha256()
-        n = 0
+        entries = []
         for dirpath, dirnames, filenames in os.walk(base):
-            dirnames.sort()
-            for name in sorted(filenames):
+            for name in dirnames + filenames:
                 p = Path(dirpath) / name
-                h.update(str(p.relative_to(base)).encode() + b"\0")
-                h.update(os.readlink(p).encode() if p.is_symlink() else p.read_bytes())
-                n += 1
-        return h.hexdigest() if n else None
+                if p.is_symlink():
+                    kind, payload = b"link", os.fsencode(os.readlink(p))
+                elif p.is_dir():
+                    kind, payload = b"dir", b""
+                else:
+                    kind, payload = b"file", p.read_bytes()
+                entries.append((os.fsencode(p.relative_to(base)), kind, payload))
+            dirnames[:] = sorted(name for name in dirnames
+                                 if not (Path(dirpath) / name).is_symlink())
+        for path, kind, payload in sorted(entries):
+            h.update(kind + b"|" + len(path).to_bytes(8, "big") + b"|" + path
+                     + b"|" + len(payload).to_bytes(8, "big") + b"|" + payload)
+        return h.hexdigest()
     return fp
 
 

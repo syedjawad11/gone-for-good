@@ -8,15 +8,15 @@ def render_prompt(pair: Pair, variant_artifacts: list[Artifact], tool_versions: 
     parts = [
         "You are reviewing a command before anyone runs it. Do not run anything. Predict the outcome.",
         "",
-        f"Environment: Linux, {versions['bash']}, {versions['coreutils']}, {versions['git']}, SQLite {versions['sqlite']}. The working directory is the project root",
-        "shown below. The command is run exactly as written, by a non-root user, from the project root.",
+        f"Environment: Linux, {versions['bash']}, {versions['coreutils']}, {versions['git']}, SQLite {versions['sqlite']}. The command runs as a non-root user in a fresh bash process (no startup files, default shell options, a clean environment where only PATH, HOME, LANG/LC_ALL=C and TZ=UTC are set) with the project root below as working directory.",
+        "The restore script then runs the same way, in a new bash process, from the project root.",
         "",
     ]
     for artifact in variant_artifacts:
         parts.extend((f"=== {artifact.title} ===", artifact.body.rstrip("\n"), ""))
     parts.extend((
         "=== Command to be run ===", pair.operation, "",
-        "=== Restore script run afterwards (from the project root, same shell) ===",
+        "=== Restore script (run afterwards in a new bash process) ===",
         pair.restore_script, "",
         "=== Resources ===",
     ))
