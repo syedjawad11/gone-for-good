@@ -1,0 +1,12 @@
+DB-1: longest/shortest artifact body chars = 1.001
+DB-2: longest/shortest artifact body chars = 1.002
+DB-3: longest/shortest artifact body chars = 1.000
+DB-4: longest/shortest artifact body chars = 1.000
+FS-1: longest/shortest artifact body chars = 1.001
+FS-2: longest/shortest artifact body chars = 1.001
+FS-3: longest/shortest artifact body chars = 1.021
+FS-4: longest/shortest artifact body chars = 1.002
+R-1: longest/shortest artifact body chars = 1.011
+R-2: longest/shortest artifact body chars = 1.000
+R-3: longest/shortest artifact body chars = 1.006
+R-4: longest/shortest artifact body chars = 1.000

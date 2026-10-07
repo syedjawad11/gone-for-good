@@ -63,6 +63,7 @@ BASE_ENV = {
     "GIT_AUTHOR_DATE": "2026-01-01T00:00:00Z",
     "GIT_COMMITTER_DATE": "2026-01-01T00:00:00Z",
     "GIT_CONFIG_NOSYSTEM": "1",
+    "GIT_OPTIONAL_LOCKS": "0",  # `git status` in artifacts must not rewrite .git/index (mtime leak)
 }
 
 

@@ -7,3 +7,4 @@
 .venv/
 __pycache__/
 media/
+__pycache__/

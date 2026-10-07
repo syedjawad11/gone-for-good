@@ -1,0 +1,161 @@
+{
+  "everything_lost": {
+    "by_family": {
+      "db": {
+        "item_acc": 0.0,
+        "n_items": 8,
+        "n_pairs": 4,
+        "pair_acc": 0.0
+      },
+      "fs": {
+        "item_acc": 0.0,
+        "n_items": 8,
+        "n_pairs": 4,
+        "pair_acc": 0.0
+      },
+      "recovery": {
+        "item_acc": 0.0,
+        "n_items": 8,
+        "n_pairs": 4,
+        "pair_acc": 0.0
+      }
+    },
+    "by_hops": {
+      "1": {
+        "item_acc": 0.0,
+        "n_items": 2,
+        "n_pairs": 1,
+        "pair_acc": 0.0
+      },
+      "2": {
+        "item_acc": 0.0,
+        "n_items": 22,
+        "n_pairs": 11,
+        "pair_acc": 0.0
+      }
+    },
+    "coupling_miss": 0,
+    "false_assurance": {
+      "items_with_any": 0,
+      "of": 24
+    },
+    "format_failure_rate": 0.0,
+    "item_acc": 0.0,
+    "lost_acc": 0.0,
+    "missed_permanent": {
+      "k": 0,
+      "of": 15
+    },
+    "n_items": 24,
+    "n_pairs": 12,
+    "pair_acc": 0.0,
+    "perm_flag_inconsistency_rate": 0.0,
+    "rec_acc": 0.4166666666666667
+  },
+  "naive_reader": {
+    "by_family": {
+      "db": {
+        "item_acc": 0.125,
+        "n_items": 8,
+        "n_pairs": 4,
+        "pair_acc": 0.0
+      },
+      "fs": {
+        "item_acc": 0.25,
+        "n_items": 8,
+        "n_pairs": 4,
+        "pair_acc": 0.0
+      },
+      "recovery": {
+        "item_acc": 0.25,
+        "n_items": 8,
+        "n_pairs": 4,
+        "pair_acc": 0.0
+      }
+    },
+    "by_hops": {
+      "1": {
+        "item_acc": 0.5,
+        "n_items": 2,
+        "n_pairs": 1,
+        "pair_acc": 0.0
+      },
+      "2": {
+        "item_acc": 0.18181818181818182,
+        "n_items": 22,
+        "n_pairs": 11,
+        "pair_acc": 0.0
+      }
+    },
+    "coupling_miss": 5,
+    "false_assurance": {
+      "items_with_any": 4,
+      "of": 24
+    },
+    "format_failure_rate": 0.0,
+    "item_acc": 0.20833333333333334,
+    "lost_acc": 0.5416666666666666,
+    "missed_permanent": {
+      "k": 6,
+      "of": 15
+    },
+    "n_items": 24,
+    "n_pairs": 12,
+    "pair_acc": 0.0,
+    "perm_flag_inconsistency_rate": 0.0,
+    "rec_acc": 0.4166666666666667
+  },
+  "nothing_lost": {
+    "by_family": {
+      "db": {
+        "item_acc": 0.375,
+        "n_items": 8,
+        "n_pairs": 4,
+        "pair_acc": 0.0
+      },
+      "fs": {
+        "item_acc": 0.0,
+        "n_items": 8,
+        "n_pairs": 4,
+        "pair_acc": 0.0
+      },
+      "recovery": {
+        "item_acc": 0.0,
+        "n_items": 8,
+        "n_pairs": 4,
+        "pair_acc": 0.0
+      }
+    },
+    "by_hops": {
+      "1": {
+        "item_acc": 0.0,
+        "n_items": 2,
+        "n_pairs": 1,
+        "pair_acc": 0.0
+      },
+      "2": {
+        "item_acc": 0.13636363636363635,
+        "n_items": 22,
+        "n_pairs": 11,
+        "pair_acc": 0.0
+      }
+    },
+    "coupling_miss": 3,
+    "false_assurance": {
+      "items_with_any": 0,
+      "of": 24
+    },
+    "format_failure_rate": 0.0,
+    "item_acc": 0.125,
+    "lost_acc": 0.125,
+    "missed_permanent": {
+      "k": 15,
+      "of": 15
+    },
+    "n_items": 24,
+    "n_pairs": 12,
+    "pair_acc": 0.0,
+    "perm_flag_inconsistency_rate": 0.0,
+    "rec_acc": 0.4166666666666667
+  }
+}

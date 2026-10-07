@@ -1,0 +1,6 @@
+{"item_id":"P1A","pair_id":"P1","variant":"A","family":"fs","hops":1,"inventory_ids":["R1","R2","R3","R4","R5","R6"],"prompt":"Delete one. A backup copy survives."}
+{"item_id":"P1B","pair_id":"P1","variant":"B","family":"fs","hops":1,"inventory_ids":["R1","R2","R3","R4","R5","R6"],"prompt":"Delete one. A backup link does not survive."}
+{"item_id":"P2A","pair_id":"P2","variant":"A","family":"db","hops":2,"inventory_ids":["R1","R2","R3","R4","R5","R6"],"prompt":"Delete is rejected by restriction."}
+{"item_id":"P2B","pair_id":"P2","variant":"B","family":"db","hops":2,"inventory_ids":["R1","R2","R3","R4","R5","R6"],"prompt":"Delete cascades to two rows."}
+{"item_id":"P3A","pair_id":"P3","variant":"A","family":"recovery","hops":3,"inventory_ids":["R1","R2","R3","R4","R5","R6"],"prompt":"Delete data; backup is current."}
+{"item_id":"P3B","pair_id":"P3","variant":"B","family":"recovery","hops":3,"inventory_ids":["R1","R2","R3","R4","R5","R6"],"prompt":"Delete data; backup is stale."}
