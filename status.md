@@ -14,6 +14,17 @@ on Kaggle; do not debug it further). STOP using gpt-6-astra (token cost); gpt-6.
 Held-out v2 CANDIDATE committed 3bfe467 (not frozen). Next: FS-8 fix, one time-boxed re-audit (gpt-6.1-sol red team +
 blind gpt-5.5), freeze into data/heldout/, push to Kaggle.
 
+## PAUSED Thu 8 Oct ~08:20 Malta. Resume TONIGHT (Jawad). Nothing running.
+Tonight's plan, in order:
+1. Fix FS-8A (fixtures/fs/fs8.py): add non-dereferenced evidence, e.g. `stat -c '%F %i %h' data/ledger.csv hold/ledger.csv`
+   (or `ls -li`), so hard link vs symlink is decidable. Rebuild + Docker gold (expect A/B unchanged), tests pass.
+2. One time-boxed re-audit of held-out v2: `codex-panel.sh --redteam` (gpt-6.1-sol + gpt-5.5) + blind gpt-5.5
+   (prompts only, no gold). Fix/drop only for ambiguity, leakage or wrong gold — never because a model got it right/wrong.
+3. Freeze prompts + gold + scorer + settings (16K cap, 600 s timeout) into data/heldout/; commit.
+4. Push to Kaggle (`kaggle b auth -y` first; `kaggle b t push gone-for-good -f tasks/gone_for_good.py --wait`),
+   smoke-test candidate models incl. an open-weight replacement for gpt-oss. Confirm public link works.
+Then: Fri full run (6 completed models > 8 partial), Sat post, Sun buffer.
+
 ## Deadline
 - Submissions close Sun 11 Oct 2026, 23:59 PDT = Mon 12 Oct 06:59 UTC = 08:59 Malta.
 - Schedule in PLAN.md (we are ~2 days behind the brief's original schedule; scope cut accordingly).
