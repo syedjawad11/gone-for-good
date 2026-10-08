@@ -31,7 +31,7 @@ trust, results across models, and a post that teaches something.
 ## Roles
 
 See the workspace CLAUDE.md roles table and this folder's PLAN.md "Team". In short:
-Claude orchestrates; gpt-6-sol builds; gpt-6.1-sol + gpt-5.5 (+ gpt-6-astra red team)
+Claude orchestrates; gpt-6-sol builds; gpt-6.1-sol (also red team; no gpt-6-astra) + gpt-5.5
 review via `../../scripts/codex-panel.sh`. Jawad owns the Kaggle account, publishes the
 task and the post.
 

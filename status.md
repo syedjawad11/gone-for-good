@@ -1,8 +1,18 @@
 # Status: Kaggle Benchmarking Challenge (workspace memory)
 
 Read this first when resuming. Update it at every milestone or break.
-Last updated: Wed 7 Oct 2026 ~18:45 Malta. WORKING. Jawad approved all three next steps (7 Oct).
-Running: gpt-oss-120b pilot v3 in 8 shards (results/local-v3/gpt-oss-shards/); fix workers W11/W12/W13 on held-out.
+Last updated: Thu 8 Oct 2026 ~08:15 Malta. WORKING.
+8 Oct decisions (Jawad): DROP gpt-oss-120b (never answers via local proxy; replace with another open-weight model
+on Kaggle; do not debug it further). STOP using gpt-6-astra (token cost); gpt-6.1-sol does red team
+(models.env + codex-panel.sh updated). gpt-6.1-sol opinion on Claude's recs: .agent/reviews/20261008-080336-recs-opinion.md
+-> agrees with all three (no tuning on model answers; re-audit before freeze; replace gpt-oss) with conditions:
+ * FS-8A ambiguity: `-ef` follows symlinks, so a symlink backup fits the evidence -> show `stat -c '%F %i'`/ls -li. FIX BEFORE FREEZE.
+ * Prove Kaggle execution TODAY (push task, smoke-test candidate models incl. the open-weight replacement).
+ * Post wording: "strongest models tested approach ceiling on these fixtures", pair metric as headline;
+   separate reasoning vs format vs truncation errors; disclose v1/v2 development and pre-freeze exposure.
+ * Freeze prompts + gold + scorer + run settings (16K cap) together; log finish reasons + API failures.
+Held-out v2 CANDIDATE committed 3bfe467 (not frozen). Next: FS-8 fix, one time-boxed re-audit (gpt-6.1-sol red team +
+blind gpt-5.5), freeze into data/heldout/, push to Kaggle.
 
 ## Deadline
 - Submissions close Sun 11 Oct 2026, 23:59 PDT = Mon 12 Oct 06:59 UTC = 08:59 Malta.
@@ -14,7 +24,7 @@ Running: gpt-oss-120b pilot v3 in 8 shards (results/local-v3/gpt-oss-shards/); f
 - No GitHub repo, no Kaggle task yet.
 
 ## Done (7 Oct)
-- Panel review (gpt-6.1-sol, gpt-5.5, gpt-6-astra) → contract fixes, recorded in PLAN.md.
+- Panel review (gpt-6.1-sol, gpt-5.5, gpt-6-astra [no longer used]) → contract fixes, recorded in PLAN.md.
 - Sources + prior art verified (docs/sources.md). Docker running, base image pulled.
 - Kaggle CLI 2.2.4 + kaggle-benchmarks 0.6.1 in .venv; Kaggle's official skill in .claude/skills.
 

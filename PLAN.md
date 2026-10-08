@@ -19,7 +19,7 @@ Deadline: Sun 11 Oct 2026 23:59 PDT = Mon 12 Oct 08:59 Malta.
 | Builder | gpt-6-sol | `scripts/codex-worker.sh <dir> <task.md>` |
 | Lead reviewer | gpt-6.1-sol | `scripts/codex-review.sh` |
 | Independent auditor | gpt-5.5 | `MODEL=gpt-5.5 scripts/codex-review.sh` or via panel |
-| Red team | gpt-6-astra | `scripts/codex-panel.sh --redteam` |
+| Red team | gpt-6.1-sol (astra dropped 8 Oct, token cost) | `scripts/codex-panel.sh --redteam` |
 | Cheap helper | gpt-6-luna | `MODEL=gpt-6-luna EFFORT=low scripts/codex-worker.sh` |
 | Research | Claude Sonnet 5 subagent | source checks, prior art |
 
