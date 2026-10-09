@@ -1,0 +1,57 @@
+
+================ gpt-6.1-sol ================
+[review by gpt-6.1-sol -> /Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026/.agent/reviews/20261009-200245-panel-gpt-6.1-sol.md]
+Two ambiguity blockers remain, including one in the FS-8 replacement. Reviewed all 36 items, substituting `fs8fix` for FS-8.
+
+1. **FS-8A — blocker: parent-directory aliasing remains possible.**  
+   File: [replacement items.jsonl](.agent/heldout-check/fs8fix/items.jsonl)  
+   Evidence: `"hold/ledger.csv same-file data/ledger.csv"` and both paths report `"regular file, 2 links"`.
+
+   These observations also fit `hold -> data`, with an additional hard link elsewhere supplying the link count. `stat` follows symlinks in parent components. After `sed -i` replaces `data/ledger.csv`, both displayed paths then resolve to the **new** inode. The restore copies a file onto itself; the original bytes are not restored. That permits `lost=["R2"], recoverable=[], permanent_loss=true`, contradicting the candidate answer while preserving every displayed artifact.
+
+   **Minimal fix:** show `ls -ld data hold`, establishing that both parents are ordinary directories.
+
+2. **FS-8A, FS-8B, R-10A, R-10B — blocker: write permissions are unspecified.**  
+   Files: [FS-8 replacement](.agent/heldout-check/fs8fix/items.jsonl), [v2 items](.agent/heldout-check/v2/items.jsonl)  
+   Evidence: `"The command runs as a non-root user"`; FS-8 prints only `"%n: %F, %h links"`; R-10 uses `": > volumes/pgdata/ledger.seg"` without showing permissions.
+
+   Mode `0444` produces identical displayed evidence:
+   - FS-8A: with writable parents, `sed -i` replaces the file and preserves its mode; the subsequent plain `cp` cannot overwrite it. R2 becomes unrecoverable. [GNU sed implementation](https://github.com/mirror/sed/blob/v4.9/sed/execute.c#L603-L637)
+   - FS-8B: redirection into the ledger fails, leaving no lost resource.
+   - R-10A/B: truncation fails, also leaving no lost resource.
+
+   **Minimal fix:** add a shared environment statement that permissions permit the shown operations unless explicitly displayed otherwise, or supply the relevant ownership and permission evidence.
+
+**Leaks/shortcuts:** none found in wording, resource names, artifact content, or A/B differences.
+
+**Wrong gold:** no definite errors found for the environments actually built by the fixtures. The findings above concern alternative environments permitted by the prompts.
+
+Read-only review; no fixtures rerun or files changed.
+
+**Verdict: hold freeze until these prompt assumptions are explicit.**
+================ gpt-5.5 ================
+[review by gpt-5.5 -> /Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026/.agent/reviews/20261009-200245-panel-gpt-5.5.md]
+**Findings**
+
+1. `FS-8A` — blocker ambiguity in the v2 candidate unless FS-8 is replaced from `fs8fix`.
+
+Evidence in [v2/items.jsonl](</Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026/.agent/heldout-check/v2/items.jsonl:21>) only says:
+
+> `hold/ledger.csv same-file data/ledger.csv`
+
+It does not say whether this is a hard link or a symlink. That matters for `MODE=replace` with `sed -i`: a hard-linked `hold/ledger.csv` preserves the old bytes and makes `R2` recoverable; some symlink arrangements would not. The fixed prompt in [fs8fix/items.jsonl](</Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026/.agent/heldout-check/fs8fix/items.jsonl:1>) adds the decisive evidence:
+
+> `data/ledger.csv: regular file, 2 links`  
+> `hold/ledger.csv: regular file, 2 links`
+
+Minimal fix: replace/regenerate the `FS-8A`/`FS-8B` entries in `.agent/heldout-check/v2/items.jsonl` from `.agent/heldout-check/fs8fix/items.jsonl` before freezing. Gold can stay as-is.
+
+**Category Checks**
+
+Ambiguity: one blocker, `FS-8A` in the current v2 file. I did not find other ambiguous lost/recoverable labels in DB-5..10, FS-5..10, or R-5..10.
+
+Leaks/shortcuts: no findings. I did not see wording, resource names, artifact titles, or A/B diffs that expose the answer without using the shown command/environment semantics.
+
+Wrong gold labels: no findings. The labels match the stated Linux/GNU bash/coreutils/git/SQLite behavior, including SQLite affinity/FK cases, git index/worktree cases, `find` precedence, `sed -i` vs stream overwrite, and hard-link restore behavior.
+
+Verdict: fix/integrate FS-8 from `fs8fix` into v2 before freeze; otherwise do not freeze v2 as currently written.

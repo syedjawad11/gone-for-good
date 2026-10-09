@@ -8,7 +8,7 @@ def render_prompt(pair: Pair, variant_artifacts: list[Artifact], tool_versions: 
     parts = [
         "You are reviewing a command before anyone runs it. Do not run anything. Predict the outcome.",
         "",
-        f"Environment: Linux, {versions['bash']}, {versions['coreutils']}, {versions['git']}, SQLite {versions['sqlite']}. The command runs as a non-root user in a fresh bash process (no startup files, default shell options, a clean environment where only PATH, HOME, LANG/LC_ALL=C and TZ=UTC are set) with the project root below as working directory.",
+        f"Environment: Linux, {versions['bash']}, {versions['coreutils']}, {versions['git']}, SQLite {versions['sqlite']}. The command runs as a non-root user in a fresh bash process (no startup files, default shell options, a clean environment where only PATH, HOME, LANG/LC_ALL=C and TZ=UTC are set) with the project root below as working directory. That user owns every file and directory in the project; every directory, and every regular file outside .git, is writable by it.",
         "The restore script then runs the same way, in a new bash process, from the project root.",
         "",
     ]

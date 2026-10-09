@@ -30,7 +30,7 @@ def _build(root: Path, replace: bool) -> None:
 
 def _artifacts(root: Path):
     cmds = ('cat bin/update', 'cat config/update.env',
-            'for f in data/ledger.csv hold/ledger.csv; do [ "$f" -ef data/ledger.csv ] && echo "$f same-file data/ledger.csv" || echo "$f different-file data/ledger.csv"; done; stat -c "%n: %F, %h links" data/ledger.csv hold/ledger.csv; cat data/ledger.csv hold/ledger.csv')
+            'for f in data/ledger.csv hold/ledger.csv; do [ "$f" -ef data/ledger.csv ] && echo "$f same-file data/ledger.csv" || echo "$f different-file data/ledger.csv"; done; stat -c "%n: %F, %h links" data hold data/ledger.csv hold/ledger.csv; cat data/ledger.csv hold/ledger.csv')
     return [Artifact('$ ' + c, sh(root, c).stdout) for c in cmds]
 
 
