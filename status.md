@@ -1,7 +1,18 @@
 # Status: Kaggle Benchmarking Challenge (workspace memory)
 
 Read this first when resuming. Update it at every milestone or break.
-Last updated: Thu 8 Oct 2026 ~08:15 Malta. WORKING.
+Last updated: Fri 9 Oct 2026 ~21:00 Malta.
+DONE tonight (Fri 9 Oct):
+1. FS-8 fix: prompt now shows `stat -c "%n: %F, %h links" data hold data/ledger.csv hold/ledger.csv` (commits 56b31a7, 0011747). Gold unchanged.
+2. Re-audit: red team gpt-6.1-sol + gpt-5.5 panel (.agent/reviews/20261009-200245-*). Red team found FS-8A parent-dir aliasing and unstated write permissions; both fixed. The prompt environment line now says the user owns every file/dir and every directory and every regular file outside .git is writable (harness/render.py); verified on all 30 pairs in Docker by .agent/check_perms.py (0 violations). Blind gpt-5.5 35/36 (.agent/reviews/blind-v2/); DB-5A miss is a model error (correlated subquery `id` binds to outer items.id), gold correct. FS-5 flagged medium-confidence ("contents of" a symlink), left as is.
+3. Held-out v3 and pilot gold byte-identical to before; pilot data/items.jsonl regenerated with the new sentence; 84 tests pass.
+4. FROZEN: data/heldout/ (18 pairs / 36 items) + FREEZE.md with sha256 of items, gold, scoring.py, render.py, build_task.py, tasks/gone_for_good.py. Commit e52e2d6. tasks/gone_for_good.py now embeds the 36 held-out items (16K cap, 600 s).
+NEXT:
+- Push to Kaggle: `kaggle b auth -y; kaggle b t push gone-for-good -f tasks/gone_for_good.py --wait`. Blocked in Claude Code by the permission classifier (counts as creating a public surface). Needs Jawad to approve or run it himself.
+- Smoke-test, then the main run on 6-8 models. Local .env LLMS_AVAILABLE lists 8: claude-sonnet-5, deepseek-r1-0528, gemini-3-flash-preview, gemini-3.1-flash-lite-preview, granite-4.0-h-small, gpt-5.4-nano, gpt-oss-120b (dropped), qwen3-next-80b. Open-weight already covered by DeepSeek R1, Qwen3-Next and Granite. A further open-weight model can come from the 46 on Kaggle (Jawad's choice).
+- Sat: post. Sun: buffer.
+
+## HISTORY (superseded by the 9 Oct items above): 8 Oct decisions (Jawad)
 8 Oct decisions (Jawad): DROP gpt-oss-120b (never answers via local proxy; replace with another open-weight model
 on Kaggle; do not debug it further). STOP using gpt-6-astra (token cost); gpt-6.1-sol does red team
 (models.env + codex-panel.sh updated). gpt-6.1-sol opinion on Claude's recs: .agent/reviews/20261008-080336-recs-opinion.md
@@ -13,17 +24,6 @@ on Kaggle; do not debug it further). STOP using gpt-6-astra (token cost); gpt-6.
  * Freeze prompts + gold + scorer + run settings (16K cap) together; log finish reasons + API failures.
 Held-out v2 CANDIDATE committed 3bfe467 (not frozen). Next: FS-8 fix, one time-boxed re-audit (gpt-6.1-sol red team +
 blind gpt-5.5), freeze into data/heldout/, push to Kaggle.
-
-## PAUSED Thu 8 Oct ~08:20 Malta. Resume TONIGHT (Jawad). Nothing running.
-Tonight's plan, in order:
-1. Fix FS-8A (fixtures/fs/fs8.py): add non-dereferenced evidence, e.g. `stat -c '%F %i %h' data/ledger.csv hold/ledger.csv`
-   (or `ls -li`), so hard link vs symlink is decidable. Rebuild + Docker gold (expect A/B unchanged), tests pass.
-2. One time-boxed re-audit of held-out v2: `codex-panel.sh --redteam` (gpt-6.1-sol + gpt-5.5) + blind gpt-5.5
-   (prompts only, no gold). Fix/drop only for ambiguity, leakage or wrong gold — never because a model got it right/wrong.
-3. Freeze prompts + gold + scorer + settings (16K cap, 600 s timeout) into data/heldout/; commit.
-4. Push to Kaggle (`kaggle b auth -y` first; `kaggle b t push gone-for-good -f tasks/gone_for_good.py --wait`),
-   smoke-test candidate models incl. an open-weight replacement for gpt-oss. Confirm public link works.
-Then: Fri full run (6 completed models > 8 partial), Sat post, Sun buffer.
 
 ## Deadline
 - Submissions close Sun 11 Oct 2026, 23:59 PDT = Mon 12 Oct 06:59 UTC = 08:59 Malta.
