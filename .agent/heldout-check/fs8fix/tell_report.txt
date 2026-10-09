@@ -1,0 +1,1 @@
+FS-8: longest/shortest artifact body chars = 1.002
