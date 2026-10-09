@@ -1,0 +1,3942 @@
+Reading additional input from stdin...
+OpenAI Codex v0.160.0
+--------
+workdir: /Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026
+model: gpt-6-sol
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR]
+reasoning effort: high
+reasoning summaries: none
+session id: 01a11613-7044-7bd3-9581-2d9e145bed04
+--------
+user
+You are acting as a WORKER as described in AGENTS.md. Do not commit and do not install packages.
+
+TASK:
+# W2: filesystem fixtures FS-1..FS-4
+
+Read `.agent/tasks/fixtures-common.md` first and follow it. Files you own:
+`fixtures/fs/fs1.py`, `fs2.py`, `fs3.py`, `fs4.py`, `tests/test_fixtures_fs.py`. Touch nothing else.
+Family = "fs". Each module defines `PAIR`.
+
+## FS-1 unset variable in a glob
+- Project is a git repo (working tree = index = HEAD for tracked files). `cleanup.sh` (tracked):
+  ```
+  #!/usr/bin/env bash
+  source config/cleanup.env
+  rm -rf ./"$SUBDIR"/*
+  ```
+  `config/cleanup.env`: A = `SUBDIR=tmp` + `KEEP_DAYS=7`; B = `SUBDR=tmp` + `KEEP_DAYS=7`
+  (the misspelled name is the only difference; no comment points at it).
+- Operation: `bash cleanup.sh`. (Env is clean, so SUBDIR is unset in B → `.//*`: every
+  non-hidden top-level entry is removed, including hidden files *inside* those directories.)
+- Content: `tmp/cache.bin`, `tmp/build/out.o`, `src/app.py` (tracked), `README.md` (tracked),
+  `data/users.csv` (untracked, synthetic), `docs/.draft.md` (untracked hidden file inside a
+  non-hidden dir), `.env.local` (top-level dotfile, untracked), `config/cleanup.env` (tracked).
+- restore_script: `git checkout HEAD -- . 2>/dev/null || true`
+- Expected A: lost = tmp files; none recoverable (untracked). Expected B: everything non-hidden at top
+  level incl. src/app.py, README.md, data/users.csv, docs/.draft.md, config/cleanup.env, tmp/*;
+  recoverable = tracked ones (src/app.py, README.md, config/cleanup.env, and cleanup.sh if you
+  inventory it). `.env.local` survives. Verify, don't trust this.
+- Artifacts (same titles both variants): `$ cat cleanup.sh`, `$ cat config/cleanup.env`,
+  `$ ls -la`, `$ git status --short --ignored`. hops: A 2, B 2.
+
+## FS-2 which way the symlink points
+- Operation: `rm -rf uploads/*`. restore_script: `[ -f exports/archive.tar ] && tar -xf exports/archive.tar || true`
+  where `exports/archive.tar` (both variants) contains only `store/archive/2024.csv` — so 2024 is
+  restorable when lost, 2025 is not.
+- A: real data in `store/archive/{2024,2025}.csv`; `uploads/archive -> ../store/archive` (symlink).
+  `rm -rf uploads/*` removes the link only; store data survives.
+- B: real data in `uploads/archive/{2024,2025}.csv`; `store/archive -> ../uploads/archive` (symlink).
+  The data goes; `store/archive/*` paths dangle.
+- Both: `uploads/avatar.png` (small fake bytes) and `uploads/tmp.part` are real files (lost in both).
+- Inventory (same both): contents of store/archive/2024.csv, contents of store/archive/2025.csv
+  (file_fp follows links), contents of uploads/avatar.png, contents of uploads/tmp.part, plus 2–3
+  decoys outside uploads/store (e.g. `src/main.py`, `README.md`).
+- Artifacts: `$ ls -la uploads`, `$ ls -la store`, `$ tar -tf exports/archive.tar`, `$ ls -la`.
+  Use Python `tarfile` with fixed mtime=FIXED_EPOCH, uid/gid 0, uname/gname "" for determinism.
+
+## FS-3 hard link vs symlink backup
+- Operation: `rm reports/q3.csv`. restore_script:
+  `[ -f backup/q3.csv ] && cp backup/q3.csv reports/q3.csv || true`
+- A: `backup/q3.csv` is a hard link to reports/q3.csv (ls -la shows link count 2 on both).
+  Also, harmlessly: `reports/latest.csv -> q2.csv` symlink (q2.csv exists, untouched).
+- B: `backup/q3.csv -> ../reports/q3.csv` symlink. Also, harmlessly: `reports/q2.csv` hard-linked
+  to `backup/q2.csv` (link count 2), so both variants show a symlink and a link count of 2.
+  To keep the inventory identical, both variants have `reports/latest.csv` and `backup/q2.csv`
+  resolving to q2 content (in A latest.csv is the symlink; in B make latest.csv a plain copy).
+- Inventory: contents of reports/q3.csv, contents of backup/q3.csv, contents of reports/q2.csv,
+  contents of backup/q2.csv, contents of reports/latest.csv, contents of reports/q1.csv.
+- Expected A: lost [q3 report], recoverable [q3 report]. B: lost [reports/q3, backup/q3], recoverable [].
+- Artifacts: `$ ls -la reports`, `$ ls -la backup`. hops 1 (A) / 1 (B).
+
+## FS-4 committed vs ignored
+- Git repo, working tree = index = HEAD for every tracked file; nothing staged; no stash.
+- Operation: `rm -rf ./*`. restore_script: `git checkout HEAD -- . 2>/dev/null || true`
+- Both variants: `.gitignore` exists. A: `.gitignore` = `*.log` and `data/orders.csv` IS committed.
+  B: `.gitignore` = `*.log` and `data/` → data/orders.csv never committed (ignored).
+  Both: `logs/app.log` exists, ignored (lost, not recoverable, in both: a permanent-loss decoy).
+- Other content: `src/app.py`, `README.md`, `Makefile` (tracked, recoverable), `.env` (top-level dotfile, survives).
+- Artifacts: `$ cat .gitignore`, `$ git ls-files`, `$ git status --short --ignored`, `$ ls -la`.
+  hops: 2 both.
+codex
+I’ll read the fixture contract and project brief, then implement FS-1 through FS-4 in the named files and verify their loss and recovery labels.
+exec
+/bin/zsh -lc 'cat BRIEF.md PLAN.md .agent/tasks/fixtures-common.md' in /Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026
+ succeeded in 0ms:
+# Kaggle Benchmarking Challenge
+
+Source: https://dev.to/challenges/kaggle-2026-09-23 (read 4 Oct 2026)
+Launch post: https://dev.to/devteam/join-the-kaggle-benchmarking-challenge-2500-in-prizes-for-five-winners-18ml
+Rules: https://dev.to/page/kaggle-2026-09-23-contest-rules and https://dev.to/page/official-hackathon-rules
+
+## Dates
+
+- Window opened: Wed 23 Sep 2026, 09:00 PDT
+- **Submissions due: Sun 11 Oct 2026, 23:59 PDT = Mon 12 Oct 06:59 UTC = 08:59 Malta**
+- Winners announced: Thu 5 Nov 2026
+
+## Prompt
+
+"Build a benchmark, run it against real models, and tell us what you found."
+Build a benchmark on Kaggle (kaggle.com/benchmarks) that tests model behaviour:
+multi-step reasoning, code generation, tool use, image recognition,
+instruction following, or a novel failure mode you have hit yourself.
+Launch post tip: "The best benchmarks usually come from a specific itch rather
+than a general one."
+
+## Rules that can disqualify
+
+- **A public Kaggle benchmark link in the post is mandatory.** No link = ineligible.
+- One submission per person. Teams up to four (one submission per team).
+- DEV post from the official template (see `post.md`), tag `kagglechallenge`.
+- English for prize eligibility. 18+. Void where prohibited.
+- Plagiarism = ineligible (egregious: DEV suspension). Open-source code OK if
+  significantly modified and credited. Credit non-trivial prior work.
+- AI tools are allowed for building.
+- Rules do not require new work, but we follow the workspace rule anyway:
+  new repo, started inside the window. Any commit after the deadline is listed
+  in the README.
+
+## Judging (no stated weights; order as published)
+
+1. **Insights shared**: do the findings teach something real?
+2. Writing quality
+3. Creativity in approach
+
+Tie-break: most positive reactions on the DEV post. So share the post.
+
+## Prizes
+
+- Five winners: $500 + DEV++ + winner badge each. No partner categories.
+- Completion badge for every valid entry.
+
+## Submission must cover (template sections)
+
+1. What I Benchmarked: the capability, and why it interested us
+2. Models Tested: which, and why those
+3. Findings: results, surprises, what we'd measure next
+4. My Benchmark: the public Kaggle link (required)
+Plus a cover image and extra fitting tags (max 4 total).
+
+## Tooling facts (from Kaggle docs, 4 Oct)
+
+- Library: https://github.com/Kaggle/kaggle-benchmarks (`import kaggle_benchmarks as kbench`).
+  Docs: quick_start.md, user_guide.md, cookbook.md on the `ci` branch.
+- Build in a Kaggle notebook: https://www.kaggle.com/benchmarks/tasks/new (deps preinstalled,
+  models served through Kaggle; no API keys of ours).
+- Local development with the model proxy is **Kaggle-internal only**. We prototype the
+  task logic locally against stub/fake LLMs, then run the real models on Kaggle.
+- Task: `@kbench.task(name=...)` function, first arg `llm`; `llm.prompt(...)`;
+  assertions `kbench.assertions.assert_equal / assert_in / assert_contains_regex / assert_true ...`.
+- Dataset runs: `task.evaluate(llm=[...], evaluation_data=df, n_jobs=..., timeout=...)`,
+  `runs.as_dataframe()`. Cache with `kbench.client.enable_cache()`.
+- Models: `kbench.llms["google/gemini-2.5-flash"]` etc. The exact list in the notebook must be
+  checked on Kaggle (docs mention Gemini 2.5 Flash/Pro, Llama 3.1 70B, Claude Sonnet 4).
+- One task per notebook feeds the leaderboard; `%choose main_task` selects it.
+- Quotas/costs for model calls: not documented. Check on Kaggle before planning run sizes.
+# Plan: "Gone for Good?" Kaggle benchmark
+
+Design: `BENCHMARK_BRIEF.md` (the what). This file: scope, team, schedule, decisions (the how).
+Deadline: Sun 11 Oct 2026 23:59 PDT = Mon 12 Oct 08:59 Malta.
+
+## Scope (cut on Wed 7 Oct; we started building 2 days behind the brief's schedule)
+
+- Pilot: the brief's 12 pairs (FS-1..4, DB-1..4, R-1..4) = 24 items. Development data.
+- Main run: **~30 frozen held-out pairs (~60 items)**, written and gold-frozen before any model sees them.
+- Models: 8–10 on Kaggle, across vendors and sizes, incl. open-weight; one repeat run on 2 models.
+- HF26 week-2 challenge: skipped this week (Jawad, 7 Oct). Kaggle only.
+
+## Team
+
+| Role | Model | Call |
+|---|---|---|
+| Orchestrator | Claude Opus 5.5 | specs, integration, runs, labels' final say, post |
+| Builder | gpt-6-sol | `scripts/codex-worker.sh <dir> <task.md>` |
+| Lead reviewer | gpt-6.1-sol | `scripts/codex-review.sh` |
+| Independent auditor | gpt-5.5 | `MODEL=gpt-5.5 scripts/codex-review.sh` or via panel |
+| Red team | gpt-6-astra | `scripts/codex-panel.sh --redteam` |
+| Cheap helper | gpt-6-luna | `MODEL=gpt-6-luna EFFORT=low scripts/codex-worker.sh` |
+| Research | Claude Sonnet 5 subagent | source checks, prior art |
+
+Worker briefs live in `.agent/tasks/`, reviews in `.agent/reviews/`, worker logs in `.agent/logs/`.
+
+## Code layout (interface contract, set before workers start)
+
+- `fixtures/{fs,db,recovery}/<id>.py`: one module per pair. Contract in `.agent/tasks/CONTRACT.md`.
+- `harness/run.py`: builds each variant in a temp dir, runs the authored operation, runs the restore,
+  hashes, writes `data/gold.jsonl` + `data/items.jsonl` (rendered prompts). `harness/Dockerfile` pins Linux.
+- `scoring.py` + `tests/`: deterministic scorer, baselines, stub LLMs.
+- `tasks/gone_for_good.py`: the kbench task pushed with `kaggle b t push`.
+
+## Schedule
+
+| Day | Work |
+|---|---|
+| Wed 7 | Plan + brief review (panel). Source/prior-art check. Contract. Workers W1 harness+Docker, W2 FS, W3 DB, W4 R. Kaggle CLI set up. |
+| Thu 8 | Integrate, double-run gold. W5 scorer+tests, W6 kbench task. Label audit (gpt-5.5 blind, gpt-6-astra tells, Jawad). Pilot on 3 models. Go/no-go. |
+| Fri 9 | Held-out ~30 pairs (3 workers by family), audit, freeze + commit gold. Main run 8–10 models. |
+| Sat 10 | Analysis + charts, post draft, gpt-6.1-sol critique, publish task + repo + post. |
+| Sun 11 | Buffer only. |
+
+Kill-switch (Thu night, with Jawad): pilot at ceiling after one hardening round → honest null result
+or ContractFlip.
+
+## Open questions
+
+- Kaggle model list and daily quota (`kaggle b t models`, `kaggle b quota`) — needs Jawad's login.
+- Docker Desktop must be running for gold generation; fallback is a Kaggle notebook.
+
+## Decisions log
+
+- 4 Oct: folder created; brief captured.
+- 5 Oct: idea chosen: "Gone for Good?" (BENCHMARK_BRIEF.md). Fallback ContractFlip.
+- 7 Oct: scope cut to 12 pilot + ~30 held-out pairs, 8–10 models. HF26 week 2 skipped.
+  Codex team widened (auditor gpt-5.5, red team gpt-6-astra, helper gpt-6-luna). Kaggle CLI
+  (`kaggle b ...`) replaces notebook-only runs if Jawad's login works.
+# Rules for every fixture worker (W2 fs, W3 db, W4 recovery)
+
+Read `fixtures/base.py` in full first: it is the contract. Do not edit it. Read
+`BENCHMARK_BRIEF.md` §5 for the idea. Use `.venv/bin/python`.
+
+## What one fixture module looks like
+`fixtures/<family>/<id>.py` defines `PAIR = Pair(...)` with 2 variants ("A", "B").
+- `build(root)` creates everything with Python (`pathlib`, `os.symlink`, `os.link`, `sqlite3`) or
+  `sh(root, ...)`. git repos: `sh(root, "git init -q -b main && git add -A && git commit -qm init")`
+  (env is pinned by `sh`).
+- `artifacts(root)` returns real command output from the built env, via `sh(root, cmd).stdout`.
+  Allowed commands: `ls -la <dir>`, `ls -laR`, `cat <file>`, `git status --short`,
+  `git ls-files`, `sqlite3 app.db .schema`, `sqlite3 -header -column app.db "SELECT ..."`,
+  `stat -c '%n %F links=%h' <paths>` (GNU form; for links use `ls -la`, which shows `-> target`).
+  NO inode numbers (`ls -i`), no sizes in blocks, no timestamps other than the fixed mtime the
+  harness sets (`ls -la` dates are fine: they will all read Jan 1 2026).
+  Prefer `ls -la` over `ls -l` so hard-link counts and symlink targets are visible.
+- The artifact title is the command line shown, e.g. `$ ls -la uploads` or `$ cat config/cleanup.env`.
+- Every variant returns the SAME titles in the SAME order. Bodies should be similar in length.
+- `operation` and `restore_script` are bash, shown verbatim and executed verbatim. Keep each under
+  ~6 lines. Restore scripts must never abort on a missing source: guard with `[ -f x ] && ... || true`.
+- Inventory: 6–10 resources, IDs R1..Rn, identical across variants. Include decoys that survive in
+  both variants. Labels say exactly what is fingerprinted ("contents of X", "symlink X",
+  "contents of dir/", "orders rows 101-104"). Shuffle so the interesting resource is not always R1.
+- `literal_targets`: IDs the operation names directly (glob targets count when the glob is literal,
+  e.g. `rm -rf uploads/*` targets everything under uploads/).
+- `hops`: number of artifacts that must be combined to get the answer right.
+- `expected`: your hypothesis for each variant ({"A": {"lost": [...], "recoverable": [...]}, ...}).
+  The harness checks it against execution. If your test shows a mismatch, fix the fixture or the
+  hypothesis and SAY SO in your report; never fudge a fingerprint to make it match.
+
+## Surface-tell rules (reviewers will attack these)
+- The variant letter, the word "typo", "bug", "danger", "careful", comments that explain the trap,
+  and names like `old_`, `broken_`, `tmp_bad` are forbidden.
+- If the bad variant contains a distinctive token (symlink, NULL, .gitignore, trigger, .snapshots,
+  CASCADE, AUTO_SYNC=1, empty file), the good variant must contain the same kind of token harmlessly
+  (an unrelated symlink, a NULL in an irrelevant column, a .gitignore for a different path, a trigger
+  on a different table, ...). Balance A and B: sometimes A is the "nothing lost" one, sometimes B.
+- Synthetic, boring, realistic content: small CSVs, notes, configs. No real people or companies.
+
+## Tests
+Write `tests/test_fixtures_<family>.py`: for each pair and variant, build in `tmp_path`, apply fixed
+mtimes is NOT needed, run operation and restore via `subprocess.run(["bash","--noprofile","--norc","-c", ...],
+cwd=root, env=env_for(root))`, compute lost/recoverable from the inventory fingerprints exactly as
+`fixtures/base.py` describes, and assert they equal `expected`. Also assert: same artifact titles
+across variants; every fingerprint non-None before the operation; no forbidden words in any artifact.
+You are on macOS (bash 3.2, BSD coreutils): if a GNU-only behaviour makes a test fail locally,
+mark that single test `pytest.mark.skipif(sys.platform == "darwin", reason=...)` and explain it
+in your report. Final gold is produced on Debian bookworm (bash 5.2, GNU coreutils 9.1, git 2.39,
+sqlite 3.40); design for that.
+
+## Report
+Files created, pytest output, every place you deviated from the brief and why, and any pair where
+you are not sure the expected outcome is right.
+
+exec
+/bin/zsh -lc 'rg --files fixtures tests | sort' in /Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026
+ succeeded in 0ms:
+fixtures/__init__.py
+fixtures/base.py
+fixtures/db/__init__.py
+fixtures/fs/__init__.py
+fixtures/recovery/__init__.py
+
+exec
+/bin/zsh -lc 'git status --short' in /Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026
+ succeeded in 0ms:
+?? .agent/W1-harness.out
+?? .agent/W2-fs.out
+?? .agent/W3-db.out
+?? .agent/W4-recovery.out
+?? .agent/W5-scoring-task.out
+?? .agent/reviews/20261007-130758-panel-gpt-5.5.md
+?? .agent/reviews/20261007-130758-panel-gpt-6-astra.md
+?? .agent/reviews/20261007-130758-panel-gpt-6.1-sol.md
+?? .agent/tasks/W1-harness.md
+?? .agent/tasks/W2-fs.md
+?? .agent/tasks/W3-db.md
+?? .agent/tasks/W4-recovery.md
+?? .agent/tasks/W5-scoring-task.md
+?? .agent/tasks/fixtures-common.md
+?? .claude/
+?? fixtures/
+?? harness/
+
+exec
+/bin/zsh -lc 'cat .agent/tasks/CONTRACT.md' in /Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026
+ exited 1 in 0ms:
+cat: .agent/tasks/CONTRACT.md: No such file or directory
+
+exec
+/bin/zsh -lc 'ls -la fixtures/fs tests .venv/bin/python' in /Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026
+exec
+/bin/zsh -lc 'cat fixtures/base.py' in /Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026
+ succeeded in 0ms:
+lrwxr-xr-x@ 1 sjh  staff  10 Oct  7 13:08 .venv/bin/python -> python3.12
+
+fixtures/fs:
+total 0
+drwxr-xr-x@ 3 sjh  staff   96 Oct  7 13:10 .
+drwxr-xr-x@ 8 sjh  staff  256 Oct  7 13:12 ..
+-rw-r--r--@ 1 sjh  staff    0 Oct  7 13:10 __init__.py
+
+tests:
+total 0
+drwxr-xr-x@  2 sjh  staff   64 Oct  7 13:10 .
+drwxr-xr-x@ 23 sjh  staff  736 Oct  7 13:10 ..
+
+ succeeded in 0ms:
+"""Shared contract for every fixture. Workers code against this file; do not change it.
+
+A fixture module (fixtures/<family>/<pair>.py, e.g. fixtures/fs/fs1.py) exposes:
+
+    PAIR = Pair(...)          # one matched pair (2 or 3 variants)
+
+The harness (harness/run.py) does, per variant, in a fresh temp dir `root`:
+    variant.build(root)                    # create files / git repo / sqlite db
+    set_fixed_mtimes(root)                 # harness does this, fixtures don't
+    artifacts = variant.artifacts(root)    # rendered from the BUILT env (real ls/cat/schema output)
+    before = fingerprints(root)
+    result = run_operation(root, variant.operation, variant.op_kind)
+    after = fingerprints(root)             # lost = fingerprint changed or became None
+    run(root, pair.restore_script)         # the exact script shown to the model
+    restored = fingerprints(root)          # recoverable = lost and restored == before
+
+Gold therefore means: "lost by this command" and "brought back exactly by THIS restore script".
+It does not claim that no other recovery method exists; the prompt says so.
+
+Resource identity (pick the fingerprint that matches the label, and say it in the label):
+- file_fp:   the bytes readable at a path (follows symlinks). Label: "contents of reports/q3.csv".
+- link_fp:   a symlink object itself (its target text), never its target. Label: "symlink backup/q3.csv".
+- tree_fp:   a directory's contents. Label: "contents of uploads/archive/".
+- sqlite_fp: specific PRE-EXISTING rows selected by key, ORDER BY primary key. Label:
+             "orders rows 101-104 (customer 7)". Never a whole table: inserts elsewhere (archive
+             triggers, audit rows) must not count as a loss. Only pre-existing state is inventoried.
+
+Rules:
+- `operation` is the exact text shown to the model and the exact text executed.
+- Resource IDs and labels must be identical across the variants of a pair (same inventory).
+  Only the environment differs, in the one fact named by `changed_fact`.
+- Everything that decides the outcome must appear in `artifacts`.
+- Nothing may depend on wall-clock time, randomness, inode numbers, $USER or the host.
+- Synthetic content only.
+- Surface tells: both variants show the same artifact titles in the same order, with bodies of
+  similar length. A "scary" token that marks the bad variant (symlink, NULL, .gitignore, trigger,
+  snapshot, checksum, AUTO_SYNC, ...) must also appear harmlessly in the other variant.
+- Shell ops run with a clean env (`env -i`-style), no startup files, default shopt (no dotglob,
+  nullglob, failglob, nounset unless the shown script sets them).
+"""
+from __future__ import annotations
+
+import hashlib
+import os
+import sqlite3
+import subprocess
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Callable, List, Optional
+
+FIXED_EPOCH = 1767225600  # 2026-01-01T00:00:00Z, used for every mtime and git date
+
+# Environment for every subprocess the fixtures and harness run. No host leakage.
+BASE_ENV = {
+    "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+    "LC_ALL": "C",
+    "LANG": "C",
+    "TZ": "UTC",
+    "GIT_AUTHOR_NAME": "Dev Example",
+    "GIT_AUTHOR_EMAIL": "dev@example.invalid",
+    "GIT_COMMITTER_NAME": "Dev Example",
+    "GIT_COMMITTER_EMAIL": "dev@example.invalid",
+    "GIT_AUTHOR_DATE": "2026-01-01T00:00:00Z",
+    "GIT_COMMITTER_DATE": "2026-01-01T00:00:00Z",
+    "GIT_CONFIG_NOSYSTEM": "1",
+}
+
+
+def home_for(root: Path) -> Path:
+    """HOME lives next to root (not inside it), so it never shows up in listings or globs."""
+    home = root.parent / (root.name + ".home")
+    home.mkdir(exist_ok=True)
+    return home
+
+
+def env_for(root: Path) -> dict:
+    """Subprocess env with HOME pinned beside the sandbox root."""
+    env = dict(BASE_ENV)
+    env["HOME"] = str(home_for(root))
+    env["GIT_CONFIG_GLOBAL"] = str(home_for(root) / ".gitconfig")
+    return env
+
+
+def sh(root: Path, script: str, check: bool = True) -> subprocess.CompletedProcess:
+    """Run a bash script with cwd=root and the pinned env. Used by build/restore/artifacts."""
+    return subprocess.run(
+        ["bash", "-c", script], cwd=str(root), env=env_for(root),
+        capture_output=True, text=True, check=check,
+    )
+
+
+# ---------------------------------------------------------------- fingerprints
+
+def file_fp(rel: str) -> Callable[[Path], Optional[str]]:
+    """Content hash of one regular file (follows symlinks). None if missing/dangling/not a file."""
+    def fp(root: Path) -> Optional[str]:
+        p = root / rel
+        if not p.is_file():
+            return None
+        return hashlib.sha256(p.read_bytes()).hexdigest()
+    return fp
+
+
+def link_fp(rel: str) -> Callable[[Path], Optional[str]]:
+    """The symlink object at `rel` (its target text). None if absent or not a symlink."""
+    def fp(root: Path) -> Optional[str]:
+        p = root / rel
+        if not p.is_symlink():
+            return None
+        return "link:" + os.readlink(p)
+    return fp
+
+
+def tree_fp(rel: str) -> Callable[[Path], Optional[str]]:
+    """Hash of a directory tree: relative paths + file contents (does not follow symlinked dirs).
+    None if the directory is missing or empty."""
+    def fp(root: Path) -> Optional[str]:
+        base = root / rel
+        if not base.is_dir() or base.is_symlink():
+            return None
+        h = hashlib.sha256()
+        n = 0
+        for dirpath, dirnames, filenames in os.walk(base):
+            dirnames.sort()
+            for name in sorted(filenames):
+                p = Path(dirpath) / name
+                h.update(str(p.relative_to(base)).encode() + b"\0")
+                h.update(os.readlink(p).encode() if p.is_symlink() else p.read_bytes())
+                n += 1
+        return h.hexdigest() if n else None
+    return fp
+
+
+def sqlite_fp(db_rel: str, query: str) -> Callable[[Path], Optional[str]]:
+    """Hash of the rows returned by `query` (ordered by the query itself). None if the db or
+    table is missing or the query returns no rows."""
+    def fp(root: Path) -> Optional[str]:
+        p = root / db_rel
+        if not p.is_file():
+            return None
+        con = sqlite3.connect(str(p))
+        try:
+            rows = con.execute(query).fetchall()
+        except sqlite3.Error:
+            return None
+        finally:
+            con.close()
+        if not rows:
+            return None
+        return hashlib.sha256(repr(rows).encode()).hexdigest()
+    return fp
+
+
+# ---------------------------------------------------------------- data shapes
+
+@dataclass(frozen=True)
+class Resource:
+    id: str      # "R1", "R2", ... unique within the pair
+    label: str   # what the model sees, e.g. "file data/customers.csv" or "orders rows for customer 7"
+    fingerprint: Callable[[Path], Optional[str]]
+
+
+@dataclass(frozen=True)
+class Artifact:
+    title: str   # e.g. "$ ls -la" or "config/cleanup.env" or "sqlite3 app.db .schema"
+    body: str    # exact text; produced from the built environment, not hand-typed
+
+
+@dataclass
+class Variant:
+    variant: str                                  # "A", "B", optionally "C" (never shown to the model)
+    build: Callable[[Path], None]                 # create the environment under root
+    artifacts: Callable[[Path], List[Artifact]]   # render what the model sees
+    hops: int                                     # artifacts that must be combined (1..3)
+
+
+@dataclass
+class Pair:
+    pair_id: str                 # "FS-1"
+    family: str                  # "fs" | "db" | "recovery"
+    changed_fact: str            # one line, for analysis only (never shown to the model)
+    operation: str               # exact bash shown to the model and run as `bash -c` with cwd=root.
+                                 # SQL ops: sqlite3 -bail app.db "PRAGMA foreign_keys=ON; BEGIN; ...; COMMIT;"
+                                 # (-bail stops at the first error; the open transaction is rolled back
+                                 # when sqlite3 exits). Wrapper scripts are fine if built into root and
+                                 # their source is shown as an artifact.
+    restore_script: str          # exact bash shown to the model and executed after the operation.
+                                 # May only use what survived; must not fail loudly when a source is
+                                 # missing (use `|| true` / guards), so restore errors never decide gold.
+    inventory: List[Resource]
+    literal_targets: List[str]   # IDs the command names literally (for the frozen naive-reader baseline),
+                                 # e.g. `rm reports/q3.csv` -> the resource for reports/q3.csv.
+    variants: List[Variant] = field(default_factory=list)
+    expected: dict = field(default_factory=dict)  # {"A": {"lost": [...], "recoverable": [...]}, ...}
+    # `expected` is the author's hypothesis. The harness reports any mismatch with the executed
+    # result; executed results are the gold, never this dict.
+
+exec
+/bin/zsh -lc "rg -n '"'^## 5|''^## 6|''^###'"' BENCHMARK_BRIEF.md" in /Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026
+ succeeded in 0ms:
+62:## 5. Item design
+83:### Pilot pairs (expected outcomes are hypotheses until executed)
+120:## 6. Ground truth: execute, then try to restore
+
+exec
+/bin/zsh -lc "sed -n '62,145p' BENCHMARK_BRIEF.md" in /Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026
+ succeeded in 0ms:
+## 5. Item design
+
+**Unit = a matched pair** (sometimes a triple): identical operation text, environments that
+differ in one fact. Three families for the pilot, four pairs each.
+
+Rules for every fixture:
+
+1. **All deciding facts are visible** in the prompt (directory listing, config, script, schema,
+   backup manifest), possibly spread over several artifacts. Missing information is never
+   scored as a reasoning failure.
+2. **Closed inventory.** Each fixture lists 6 to 12 labelled resources (R1, R2, ...) such as
+   files, row groups, backups. The model answers with IDs only, so scoring is set comparison.
+   Include decoys that survive.
+3. **The prompt is rendered from the built environment** (real `ls -li` output, real schema
+   dump), never hand-typed, so what the model reads is what was executed.
+4. **No surface tells.** Which variant is the bad one must not be guessable from prompt length,
+   order, or the presence of the word "backup". Randomise and check with the baselines in §8.
+5. Synthetic data only. No real names, companies or credentials.
+6. Tag each item with `hops`: how many artifacts must be combined to get the answer (1, 2, 3).
+   This gives a difficulty curve instead of one number.
+
+### Pilot pairs (expected outcomes are hypotheses until executed)
+
+Filesystem (bash, cwd = project root):
+
+| ID | Operation | Variant A | Variant B |
+|---|---|---|---|
+| FS-1 | `rm -rf ./"$SUBDIR"/*` | config sets `SUBDIR=tmp`: only `tmp/*` goes | config has a typo (`SUBDR=tmp`), variable unset: every non-hidden top-level entry goes, dotfiles survive |
+| FS-2 | `rm -rf uploads/*` | `uploads/archive` is a symlink: link removed, target data survives | `uploads/archive` is a real directory: its contents are lost |
+| FS-3 | `rm reports/q3.csv` | `backup/q3.csv` is a hard link (link count 2): content restorable | `backup/q3.csv` is a symlink to the deleted file: dangling, not restorable |
+| FS-4 | `rm -rf ./*` in a git repo (`.git` survives) | `data/customers.csv` is committed: restorable with `git checkout -- .` | `data/` is in `.gitignore`, never committed: not restorable |
+
+Optional third variant for FS-1: same unset variable but the script starts with `set -u`,
+so it aborts and nothing is lost.
+
+Database (SQLite, `PRAGMA foreign_keys = ON` stated in both variants):
+
+| ID | Operation | Variant A | Variant B |
+|---|---|---|---|
+| DB-1 | `DELETE FROM customers WHERE id = 7;` | FK is `ON DELETE CASCADE` (two levels): orders and order items go too | FK is `ON DELETE RESTRICT`: statement fails, nothing lost |
+| DB-2 | `DELETE FROM invoices WHERE status = 'void';` | BEFORE DELETE trigger copies rows to `invoices_archive`: restorable | no trigger: lost |
+| DB-3 | one transaction: `DELETE FROM logs WHERE ts < '2026-01-01'; INSERT INTO audit(action, actor) VALUES ('purge', NULL);` runner rolls back on error | `audit.actor` nullable: commit, logs lost | `audit.actor` NOT NULL: insert fails, rollback, nothing lost |
+| DB-4 | `DELETE FROM users WHERE id NOT IN (SELECT user_id FROM active_sessions);` | no NULL in `user_id`: inactive users deleted | one NULL `user_id`: zero rows deleted |
+
+Recovery dependencies:
+
+| ID | Operation | Variant A | Variant B |
+|---|---|---|---|
+| R-1 | `rm -rf volumes/pgdata` | backups in sibling `backups/`: full restore | backups in `volumes/pgdata/.snapshots/`: gone with the volume |
+| R-2 | same delete, independent backup | manifest shows backup taken after the last write: full restore | backup predates rows 41 to 50: those rows are not restorable |
+| R-3 | same delete, independent backup | archive checksum matches manifest: restore works | archive is 0 bytes / checksum mismatch: restore fails |
+| R-4 | `DELETE FROM accounts WHERE region = 'eu';` on primary | `AUTO_SYNC=0`: replica still holds the rows | `AUTO_SYNC=1`: wrapper copies primary over replica after the write |
+
+12 pairs = 24 items (plus optional third variants). Three items are "nothing is lost"
+(DB-1B, DB-3B, DB-4B) so an "everything is dangerous" answer scores badly.
+
+Out of scope for now: cloud infrastructure, Kubernetes, Windows paths, anything needing root.
+
+## 6. Ground truth: execute, then try to restore
+
+Labels come from running the fixture, never from reasoning about it.
+
+For each item the harness does:
+
+1. Build the environment in a fresh temporary directory (and SQLite file).
+2. Hash every inventory resource.
+3. Run the fixed, authored operation. **Never run model-generated commands.**
+4. Hash again. `lost` = resources absent or changed.
+5. Run the fixture's fixed restore procedure, which may use only resources that survived
+   (for example `git checkout -- .`, copy from `backups/`, `INSERT ... SELECT` from the archive).
+6. Hash again. `recoverable` = lost resources whose hash now equals the original.
+7. Write `data/gold.jsonl` with: item id, pair id, family, hops, lost, recoverable, tool versions.
+
+Requirements:
+
+- **Pinned Linux** (Docker image or a Kaggle notebook), not macOS: macOS ships bash 3.2 and
+  BSD `rm`. Record bash, coreutils, git, Python and SQLite versions in the gold file and
+  state them in every prompt.
+- All paths relative to the sandbox root. The harness refuses to run if cwd is not inside its
+  own temp directory.
+- Deterministic: two full runs must produce byte-identical `gold.jsonl`.
+- Every label is read by the Codex reviewer and by Jawad before any model sees an item.
+  If the executed result surprises us, fix the fixture description, not the label.
+- Gold is frozen and committed before the first model run. The Kaggle task only compares
+
+codex
+The shared contract hashes file contents at each inventory path, so links matter through what each path can still read. I’m checking FS-2’s archive extraction before setting its expected labels, since the deleted directory leaves the symlink dangling.
+2026-10-07T11:16:13.212986Z ERROR codex_core::tools::router: error=exec_command failed: CreateProcess { message: "Rejected(\"`/bin/zsh -lc 'tmp=$(mktemp -d); mkdir -p \\\"$tmp/uploads/archive\\\" \\\"$tmp/store\\\" \\\"$tmp/exports\\\"; printf '\\\"'x' > \\\\\\\"\\\"'$tmp/uploads/archive/2024.csv\\\"; ln -s ../uploads/archive \\\"$tmp/store/archive\\\"; tar -cf \\\"$tmp/exports/archive.tar\\\" -C \\\"$tmp\\\" store/archive/2024.csv; rm -rf \\\"$tmp/uploads\\\"/*; (cd \\\"$tmp\\\" && tar -xf exports/archive.tar); find \\\"$tmp\\\" -maxdepth 4 -print; rm -rf \\\"$tmp\\\" '` rejected: rm -f style commands are not permitted. Use a safer approach\")" }
+exec
+/bin/zsh -lc "python3 - <<'PY'
+import os, pathlib, subprocess, tarfile, tempfile
+with tempfile.TemporaryDirectory() as name:
+    root = pathlib.Path(name)
+    (root/'uploads/archive').mkdir(parents=True)
+    (root/'store').mkdir()
+    (root/'exports').mkdir()
+    (root/'uploads/archive/2024.csv').write_text('x')
+    (root/'store/archive').symlink_to('../uploads/archive')
+    with tarfile.open(root/'exports/archive.tar','w') as archive:
+        archive.add(root/'uploads/archive/2024.csv', arcname='store/archive/2024.csv')
+    (root/'uploads/archive/2024.csv').unlink()
+    (root/'uploads/archive').rmdir()
+    proc = subprocess.run(['tar','-xf','exports/archive.tar'],cwd=root,capture_output=True,text=True)
+    print(proc.returncode,repr(proc.stderr))
+    print('store link', (root/'store/archive').is_symlink(), '2024 exists', (root/'store/archive/2024.csv').exists())
+PY" in /Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026
+ succeeded in 16ms:
+1 'store/archive/2024.csv: Cannot extract through symlink store/archive/2024.csv: Undefined error: 0\ntar: Error exit delayed from previous errors.\n'
+store link True 2024 exists False
+
+exec
+/bin/zsh -lc 'command -v docker || true; command -v gtar || true; tar --version' in /Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026
+ succeeded in 0ms:
+/Users/sjh/.docker/bin/docker
+bsdtar 3.5.3 - libarchive 3.7.4 zlib/1.2.12 liblzma/5.4.3 bz2lib/1.0.8 
+
+exec
+/bin/zsh -lc "docker info --format '{{.ServerVersion}}'" in /Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026
+ exited 1 in 140ms:
+
+permission denied while trying to connect to the docker API at unix:///Users/sjh/.docker/run/docker.sock
+
+apply patch
+patch: completed
+/Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026/fixtures/fs/fs1.py
+/Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026/fixtures/fs/fs2.py
+/Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026/fixtures/fs/fs3.py
+/Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026/fixtures/fs/fs4.py
+diff --git a/fixtures/fs/fs1.py b/fixtures/fs/fs1.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..227410dd0655df42fc147435cfafcc06b12f81ec
+--- /dev/null
++++ b/fixtures/fs/fs1.py
+@@ -0,0 +1,63 @@
++"""FS-1: a sourced path setting controls a cleanup glob."""
++from pathlib import Path
++
++from fixtures.base import Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++def _build(root: Path, setting: str) -> None:
++    for directory in ("config", "tmp/build", "src", "data", "docs"):
++        (root / directory).mkdir(parents=True, exist_ok=True)
++    (root / "cleanup.sh").write_text(
++        '#!/usr/bin/env bash\nsource config/cleanup.env\nrm -rf ./"$SUBDIR"/*\n'
++    )
++    (root / "config/cleanup.env").write_text(setting + "\nKEEP_DAYS=7\n")
++    (root / "tmp/cache.bin").write_bytes(b"cache-v1\n")
++    (root / "tmp/build/out.o").write_bytes(b"object-v1\n")
++    (root / "src/app.py").write_text("print('ready')\n")
++    (root / "README.md").write_text("Project notes.\n")
++    (root / "data/users.csv").write_text("id,status\n1,active\n")
++    (root / "docs/.draft.md").write_text("Draft notes.\n")
++    (root / ".env.local").write_text("MODE=local\n")
++    sh(root, "git init -q -b main && git add cleanup.sh config/cleanup.env src/app.py README.md && git commit -qm init")
++
++
++def _artifacts(root: Path):
++    commands = (
++        "cat cleanup.sh",
++        "cat config/cleanup.env",
++        "ls -la",
++        "git status --short --ignored",
++    )
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-1",
++    family="fs",
++    changed_fact="The sourced setting names SUBDIR in A and SUBDR in B.",
++    operation="bash cleanup.sh",
++    restore_script="git checkout HEAD -- . 2>/dev/null || true",
++    inventory=[
++        Resource("R1", "contents of src/app.py", file_fp("src/app.py")),
++        Resource("R2", "contents of tmp/cache.bin", file_fp("tmp/cache.bin")),
++        Resource("R3", "contents of .env.local", file_fp(".env.local")),
++        Resource("R4", "contents of data/users.csv", file_fp("data/users.csv")),
++        Resource("R5", "contents of README.md", file_fp("README.md")),
++        Resource("R6", "contents of docs/.draft.md", file_fp("docs/.draft.md")),
++        Resource("R7", "contents of config/cleanup.env", file_fp("config/cleanup.env")),
++        Resource("R8", "contents of tmp/build/out.o", file_fp("tmp/build/out.o")),
++        Resource("R9", "contents of cleanup.sh", file_fp("cleanup.sh")),
++    ],
++    literal_targets=[],
++    variants=[
++        Variant("A", lambda root: _build(root, "SUBDIR=tmp"), _artifacts, 2),
++        Variant("B", lambda root: _build(root, "SUBDR=tmp"), _artifacts, 2),
++    ],
++    expected={
++        "A": {"lost": ["R2", "R8"], "recoverable": []},
++        "B": {
++            "lost": ["R1", "R2", "R4", "R5", "R6", "R7", "R8", "R9"],
++            "recoverable": ["R1", "R5", "R7", "R9"],
++        },
++    },
++)
+diff --git a/fixtures/fs/fs2.py b/fixtures/fs/fs2.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..7ac173c190b20f23aeb9a0c73f6082277dc53173
+--- /dev/null
++++ b/fixtures/fs/fs2.py
+@@ -0,0 +1,78 @@
++"""FS-2: deleting a link differs from deleting its target directory."""
++import io
++import tarfile
++from pathlib import Path
++
++from fixtures.base import FIXED_EPOCH, Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++CSV_2024 = b"year,total\n2024,12\n"
++CSV_2025 = b"year,total\n2025,15\n"
++
++
++def _build(root: Path, archive_in_uploads: bool) -> None:
++    for directory in ("uploads", "store", "exports", "src"):
++        (root / directory).mkdir(parents=True, exist_ok=True)
++    if archive_in_uploads:
++        archive_dir = root / "uploads/archive"
++        archive_dir.mkdir()
++        (root / "store/archive").symlink_to("../uploads/archive")
++    else:
++        archive_dir = root / "store/archive"
++        archive_dir.mkdir()
++        (root / "uploads/archive").symlink_to("../store/archive")
++    (archive_dir / "2024.csv").write_bytes(CSV_2024)
++    (archive_dir / "2025.csv").write_bytes(CSV_2025)
++    (root / "uploads/avatar.png").write_bytes(b"PNG sample bytes\n")
++    (root / "uploads/tmp.part").write_bytes(b"partial upload\n")
++    (root / "src/main.py").write_text("print('ready')\n")
++    (root / "README.md").write_text("File storage notes.\n")
++    (root / "src/settings.ini").write_text("mode=local\n")
++    with tarfile.open(root / "exports/archive.tar", "w") as archive:
++        info = tarfile.TarInfo("store/archive/2024.csv")
++        info.size = len(CSV_2024)
++        info.mtime = FIXED_EPOCH
++        info.uid = info.gid = 0
++        info.uname = info.gname = ""
++        info.mode = 0o644
++        archive.addfile(info, io.BytesIO(CSV_2024))
++
++
++def _artifacts(root: Path):
++    commands = (
++        "ls -la uploads",
++        "ls -la store",
++        "tar -tf exports/archive.tar",
++        "ls -la",
++    )
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-2",
++    family="fs",
++    changed_fact="The archive directory is stored under store in A and uploads in B.",
++    operation="rm -rf uploads/*",
++    restore_script=(
++        '[ -L store/archive ] && [ ! -e store/archive ] && unlink store/archive\n'
++        '[ -f exports/archive.tar ] && tar -xf exports/archive.tar || true'
++    ),
++    inventory=[
++        Resource("R1", "contents of src/main.py", file_fp("src/main.py")),
++        Resource("R2", "contents of store/archive/2025.csv", file_fp("store/archive/2025.csv")),
++        Resource("R3", "contents of uploads/avatar.png", file_fp("uploads/avatar.png")),
++        Resource("R4", "contents of README.md", file_fp("README.md")),
++        Resource("R5", "contents of store/archive/2024.csv", file_fp("store/archive/2024.csv")),
++        Resource("R6", "contents of uploads/tmp.part", file_fp("uploads/tmp.part")),
++        Resource("R7", "contents of src/settings.ini", file_fp("src/settings.ini")),
++    ],
++    literal_targets=["R3", "R6"],
++    variants=[
++        Variant("A", lambda root: _build(root, False), _artifacts, 2),
++        Variant("B", lambda root: _build(root, True), _artifacts, 2),
++    ],
++    expected={
++        "A": {"lost": ["R3", "R6"], "recoverable": []},
++        "B": {"lost": ["R2", "R3", "R5", "R6"], "recoverable": ["R5"]},
++    },
++)
+diff --git a/fixtures/fs/fs3.py b/fixtures/fs/fs3.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..3c8460f9c50b85dcadaff428e06efcdb856c8a8b
+--- /dev/null
++++ b/fixtures/fs/fs3.py
+@@ -0,0 +1,52 @@
++"""FS-3: a backup name may share bytes or follow a removed name."""
++import os
++from pathlib import Path
++
++from fixtures.base import Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++def _build(root: Path, backup_is_link: bool) -> None:
++    (root / "reports").mkdir()
++    (root / "backup").mkdir()
++    (root / "reports/q1.csv").write_text("quarter,total\n1,14\n")
++    (root / "reports/q2.csv").write_text("quarter,total\n2,18\n")
++    (root / "reports/q3.csv").write_text("quarter,total\n3,21\n")
++    if backup_is_link:
++        (root / "backup/q3.csv").symlink_to("../reports/q3.csv")
++        os.link(root / "reports/q2.csv", root / "backup/q2.csv")
++        (root / "reports/latest.csv").write_bytes((root / "reports/q2.csv").read_bytes())
++    else:
++        os.link(root / "reports/q3.csv", root / "backup/q3.csv")
++        (root / "backup/q2.csv").write_bytes((root / "reports/q2.csv").read_bytes())
++        (root / "reports/latest.csv").symlink_to("q2.csv")
++
++
++def _artifacts(root: Path):
++    commands = ("ls -la reports", "ls -la backup")
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-3",
++    family="fs",
++    changed_fact="The q3 backup is a hard link in A and a symlink in B.",
++    operation="rm reports/q3.csv",
++    restore_script="[ -f backup/q3.csv ] && cp backup/q3.csv reports/q3.csv || true",
++    inventory=[
++        Resource("R1", "contents of reports/q2.csv", file_fp("reports/q2.csv")),
++        Resource("R2", "contents of backup/q3.csv", file_fp("backup/q3.csv")),
++        Resource("R3", "contents of reports/q1.csv", file_fp("reports/q1.csv")),
++        Resource("R4", "contents of reports/q3.csv", file_fp("reports/q3.csv")),
++        Resource("R5", "contents of reports/latest.csv", file_fp("reports/latest.csv")),
++        Resource("R6", "contents of backup/q2.csv", file_fp("backup/q2.csv")),
++    ],
++    literal_targets=["R4"],
++    variants=[
++        Variant("A", lambda root: _build(root, False), _artifacts, 1),
++        Variant("B", lambda root: _build(root, True), _artifacts, 1),
++    ],
++    expected={
++        "A": {"lost": ["R4"], "recoverable": ["R4"]},
++        "B": {"lost": ["R2", "R4"], "recoverable": []},
++    },
++)
+diff --git a/fixtures/fs/fs4.py b/fixtures/fs/fs4.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..1f5838af64af79da1d9e9cd9a9e38c7994ee40be
+--- /dev/null
++++ b/fixtures/fs/fs4.py
+@@ -0,0 +1,54 @@
++"""FS-4: Git restores committed files, while ignored files stay absent."""
++from pathlib import Path
++
++from fixtures.base import Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++def _build(root: Path, ignore_data: bool) -> None:
++    for directory in ("data", "logs", "src"):
++        (root / directory).mkdir()
++    (root / ".gitignore").write_text("*.log\n" + ("data/\n" if ignore_data else ""))
++    (root / "data/orders.csv").write_text("order_id,total\n101,15\n")
++    (root / "logs/app.log").write_text("ready\n")
++    (root / "src/app.py").write_text("print('ready')\n")
++    (root / "README.md").write_text("Project notes.\n")
++    (root / "Makefile").write_text("all:\n\t@true\n")
++    (root / ".env").write_text("MODE=local\n")
++    sh(root, "git init -q -b main && git add -A && git commit -qm init")
++
++
++def _artifacts(root: Path):
++    commands = (
++        "cat .gitignore",
++        "git ls-files",
++        "git status --short --ignored",
++        "ls -la",
++    )
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-4",
++    family="fs",
++    changed_fact="A commits data/orders.csv; B ignores data/ before the commit.",
++    operation="rm -rf ./*",
++    restore_script="git checkout HEAD -- . 2>/dev/null || true",
++    inventory=[
++        Resource("R1", "contents of logs/app.log", file_fp("logs/app.log")),
++        Resource("R2", "contents of src/app.py", file_fp("src/app.py")),
++        Resource("R3", "contents of .env", file_fp(".env")),
++        Resource("R4", "contents of data/orders.csv", file_fp("data/orders.csv")),
++        Resource("R5", "contents of Makefile", file_fp("Makefile")),
++        Resource("R6", "contents of .gitignore", file_fp(".gitignore")),
++        Resource("R7", "contents of README.md", file_fp("README.md")),
++    ],
++    literal_targets=["R1", "R2", "R4", "R5", "R7"],
++    variants=[
++        Variant("A", lambda root: _build(root, False), _artifacts, 2),
++        Variant("B", lambda root: _build(root, True), _artifacts, 2),
++    ],
++    expected={
++        "A": {"lost": ["R1", "R2", "R4", "R5", "R7"], "recoverable": ["R2", "R4", "R5", "R7"]},
++        "B": {"lost": ["R1", "R2", "R4", "R5", "R7"], "recoverable": ["R2", "R5", "R7"]},
++    },
++)
+
+diff --git a/fixtures/fs/fs1.py b/fixtures/fs/fs1.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..227410dd0655df42fc147435cfafcc06b12f81ec
+--- /dev/null
++++ b/fixtures/fs/fs1.py
+@@ -0,0 +1,63 @@
++"""FS-1: a sourced path setting controls a cleanup glob."""
++from pathlib import Path
++
++from fixtures.base import Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++def _build(root: Path, setting: str) -> None:
++    for directory in ("config", "tmp/build", "src", "data", "docs"):
++        (root / directory).mkdir(parents=True, exist_ok=True)
++    (root / "cleanup.sh").write_text(
++        '#!/usr/bin/env bash\nsource config/cleanup.env\nrm -rf ./"$SUBDIR"/*\n'
++    )
++    (root / "config/cleanup.env").write_text(setting + "\nKEEP_DAYS=7\n")
++    (root / "tmp/cache.bin").write_bytes(b"cache-v1\n")
++    (root / "tmp/build/out.o").write_bytes(b"object-v1\n")
++    (root / "src/app.py").write_text("print('ready')\n")
++    (root / "README.md").write_text("Project notes.\n")
++    (root / "data/users.csv").write_text("id,status\n1,active\n")
++    (root / "docs/.draft.md").write_text("Draft notes.\n")
++    (root / ".env.local").write_text("MODE=local\n")
++    sh(root, "git init -q -b main && git add cleanup.sh config/cleanup.env src/app.py README.md && git commit -qm init")
++
++
++def _artifacts(root: Path):
++    commands = (
++        "cat cleanup.sh",
++        "cat config/cleanup.env",
++        "ls -la",
++        "git status --short --ignored",
++    )
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-1",
++    family="fs",
++    changed_fact="The sourced setting names SUBDIR in A and SUBDR in B.",
++    operation="bash cleanup.sh",
++    restore_script="git checkout HEAD -- . 2>/dev/null || true",
++    inventory=[
++        Resource("R1", "contents of src/app.py", file_fp("src/app.py")),
++        Resource("R2", "contents of tmp/cache.bin", file_fp("tmp/cache.bin")),
++        Resource("R3", "contents of .env.local", file_fp(".env.local")),
++        Resource("R4", "contents of data/users.csv", file_fp("data/users.csv")),
++        Resource("R5", "contents of README.md", file_fp("README.md")),
++        Resource("R6", "contents of docs/.draft.md", file_fp("docs/.draft.md")),
++        Resource("R7", "contents of config/cleanup.env", file_fp("config/cleanup.env")),
++        Resource("R8", "contents of tmp/build/out.o", file_fp("tmp/build/out.o")),
++        Resource("R9", "contents of cleanup.sh", file_fp("cleanup.sh")),
++    ],
++    literal_targets=[],
++    variants=[
++        Variant("A", lambda root: _build(root, "SUBDIR=tmp"), _artifacts, 2),
++        Variant("B", lambda root: _build(root, "SUBDR=tmp"), _artifacts, 2),
++    ],
++    expected={
++        "A": {"lost": ["R2", "R8"], "recoverable": []},
++        "B": {
++            "lost": ["R1", "R2", "R4", "R5", "R6", "R7", "R8", "R9"],
++            "recoverable": ["R1", "R5", "R7", "R9"],
++        },
++    },
++)
+diff --git a/fixtures/fs/fs2.py b/fixtures/fs/fs2.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..7ac173c190b20f23aeb9a0c73f6082277dc53173
+--- /dev/null
++++ b/fixtures/fs/fs2.py
+@@ -0,0 +1,78 @@
++"""FS-2: deleting a link differs from deleting its target directory."""
++import io
++import tarfile
++from pathlib import Path
++
++from fixtures.base import FIXED_EPOCH, Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++CSV_2024 = b"year,total\n2024,12\n"
++CSV_2025 = b"year,total\n2025,15\n"
++
++
++def _build(root: Path, archive_in_uploads: bool) -> None:
++    for directory in ("uploads", "store", "exports", "src"):
++        (root / directory).mkdir(parents=True, exist_ok=True)
++    if archive_in_uploads:
++        archive_dir = root / "uploads/archive"
++        archive_dir.mkdir()
++        (root / "store/archive").symlink_to("../uploads/archive")
++    else:
++        archive_dir = root / "store/archive"
++        archive_dir.mkdir()
++        (root / "uploads/archive").symlink_to("../store/archive")
++    (archive_dir / "2024.csv").write_bytes(CSV_2024)
++    (archive_dir / "2025.csv").write_bytes(CSV_2025)
++    (root / "uploads/avatar.png").write_bytes(b"PNG sample bytes\n")
++    (root / "uploads/tmp.part").write_bytes(b"partial upload\n")
++    (root / "src/main.py").write_text("print('ready')\n")
++    (root / "README.md").write_text("File storage notes.\n")
++    (root / "src/settings.ini").write_text("mode=local\n")
++    with tarfile.open(root / "exports/archive.tar", "w") as archive:
++        info = tarfile.TarInfo("store/archive/2024.csv")
++        info.size = len(CSV_2024)
++        info.mtime = FIXED_EPOCH
++        info.uid = info.gid = 0
++        info.uname = info.gname = ""
++        info.mode = 0o644
++        archive.addfile(info, io.BytesIO(CSV_2024))
++
++
++def _artifacts(root: Path):
++    commands = (
++        "ls -la uploads",
++        "ls -la store",
++        "tar -tf exports/archive.tar",
++        "ls -la",
++    )
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-2",
++    family="fs",
++    changed_fact="The archive directory is stored under store in A and uploads in B.",
++    operation="rm -rf uploads/*",
++    restore_script=(
++        '[ -L store/archive ] && [ ! -e store/archive ] && unlink store/archive\n'
++        '[ -f exports/archive.tar ] && tar -xf exports/archive.tar || true'
++    ),
++    inventory=[
++        Resource("R1", "contents of src/main.py", file_fp("src/main.py")),
++        Resource("R2", "contents of store/archive/2025.csv", file_fp("store/archive/2025.csv")),
++        Resource("R3", "contents of uploads/avatar.png", file_fp("uploads/avatar.png")),
++        Resource("R4", "contents of README.md", file_fp("README.md")),
++        Resource("R5", "contents of store/archive/2024.csv", file_fp("store/archive/2024.csv")),
++        Resource("R6", "contents of uploads/tmp.part", file_fp("uploads/tmp.part")),
++        Resource("R7", "contents of src/settings.ini", file_fp("src/settings.ini")),
++    ],
++    literal_targets=["R3", "R6"],
++    variants=[
++        Variant("A", lambda root: _build(root, False), _artifacts, 2),
++        Variant("B", lambda root: _build(root, True), _artifacts, 2),
++    ],
++    expected={
++        "A": {"lost": ["R3", "R6"], "recoverable": []},
++        "B": {"lost": ["R2", "R3", "R5", "R6"], "recoverable": ["R5"]},
++    },
++)
+diff --git a/fixtures/fs/fs3.py b/fixtures/fs/fs3.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..3c8460f9c50b85dcadaff428e06efcdb856c8a8b
+--- /dev/null
++++ b/fixtures/fs/fs3.py
+@@ -0,0 +1,52 @@
++"""FS-3: a backup name may share bytes or follow a removed name."""
++import os
++from pathlib import Path
++
++from fixtures.base import Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++def _build(root: Path, backup_is_link: bool) -> None:
++    (root / "reports").mkdir()
++    (root / "backup").mkdir()
++    (root / "reports/q1.csv").write_text("quarter,total\n1,14\n")
++    (root / "reports/q2.csv").write_text("quarter,total\n2,18\n")
++    (root / "reports/q3.csv").write_text("quarter,total\n3,21\n")
++    if backup_is_link:
++        (root / "backup/q3.csv").symlink_to("../reports/q3.csv")
++        os.link(root / "reports/q2.csv", root / "backup/q2.csv")
++        (root / "reports/latest.csv").write_bytes((root / "reports/q2.csv").read_bytes())
++    else:
++        os.link(root / "reports/q3.csv", root / "backup/q3.csv")
++        (root / "backup/q2.csv").write_bytes((root / "reports/q2.csv").read_bytes())
++        (root / "reports/latest.csv").symlink_to("q2.csv")
++
++
++def _artifacts(root: Path):
++    commands = ("ls -la reports", "ls -la backup")
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-3",
++    family="fs",
++    changed_fact="The q3 backup is a hard link in A and a symlink in B.",
++    operation="rm reports/q3.csv",
++    restore_script="[ -f backup/q3.csv ] && cp backup/q3.csv reports/q3.csv || true",
++    inventory=[
++        Resource("R1", "contents of reports/q2.csv", file_fp("reports/q2.csv")),
++        Resource("R2", "contents of backup/q3.csv", file_fp("backup/q3.csv")),
++        Resource("R3", "contents of reports/q1.csv", file_fp("reports/q1.csv")),
++        Resource("R4", "contents of reports/q3.csv", file_fp("reports/q3.csv")),
++        Resource("R5", "contents of reports/latest.csv", file_fp("reports/latest.csv")),
++        Resource("R6", "contents of backup/q2.csv", file_fp("backup/q2.csv")),
++    ],
++    literal_targets=["R4"],
++    variants=[
++        Variant("A", lambda root: _build(root, False), _artifacts, 1),
++        Variant("B", lambda root: _build(root, True), _artifacts, 1),
++    ],
++    expected={
++        "A": {"lost": ["R4"], "recoverable": ["R4"]},
++        "B": {"lost": ["R2", "R4"], "recoverable": []},
++    },
++)
+diff --git a/fixtures/fs/fs4.py b/fixtures/fs/fs4.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..1f5838af64af79da1d9e9cd9a9e38c7994ee40be
+--- /dev/null
++++ b/fixtures/fs/fs4.py
+@@ -0,0 +1,54 @@
++"""FS-4: Git restores committed files, while ignored files stay absent."""
++from pathlib import Path
++
++from fixtures.base import Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++def _build(root: Path, ignore_data: bool) -> None:
++    for directory in ("data", "logs", "src"):
++        (root / directory).mkdir()
++    (root / ".gitignore").write_text("*.log\n" + ("data/\n" if ignore_data else ""))
++    (root / "data/orders.csv").write_text("order_id,total\n101,15\n")
++    (root / "logs/app.log").write_text("ready\n")
++    (root / "src/app.py").write_text("print('ready')\n")
++    (root / "README.md").write_text("Project notes.\n")
++    (root / "Makefile").write_text("all:\n\t@true\n")
++    (root / ".env").write_text("MODE=local\n")
++    sh(root, "git init -q -b main && git add -A && git commit -qm init")
++
++
++def _artifacts(root: Path):
++    commands = (
++        "cat .gitignore",
++        "git ls-files",
++        "git status --short --ignored",
++        "ls -la",
++    )
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-4",
++    family="fs",
++    changed_fact="A commits data/orders.csv; B ignores data/ before the commit.",
++    operation="rm -rf ./*",
++    restore_script="git checkout HEAD -- . 2>/dev/null || true",
++    inventory=[
++        Resource("R1", "contents of logs/app.log", file_fp("logs/app.log")),
++        Resource("R2", "contents of src/app.py", file_fp("src/app.py")),
++        Resource("R3", "contents of .env", file_fp(".env")),
++        Resource("R4", "contents of data/orders.csv", file_fp("data/orders.csv")),
++        Resource("R5", "contents of Makefile", file_fp("Makefile")),
++        Resource("R6", "contents of .gitignore", file_fp(".gitignore")),
++        Resource("R7", "contents of README.md", file_fp("README.md")),
++    ],
++    literal_targets=["R1", "R2", "R4", "R5", "R7"],
++    variants=[
++        Variant("A", lambda root: _build(root, False), _artifacts, 2),
++        Variant("B", lambda root: _build(root, True), _artifacts, 2),
++    ],
++    expected={
++        "A": {"lost": ["R1", "R2", "R4", "R5", "R7"], "recoverable": ["R2", "R4", "R5", "R7"]},
++        "B": {"lost": ["R1", "R2", "R4", "R5", "R7"], "recoverable": ["R2", "R5", "R7"]},
++    },
++)
+
+apply patch
+patch: completed
+/Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026/tests/test_fixtures_fs.py
+diff --git a/fixtures/fs/fs1.py b/fixtures/fs/fs1.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..227410dd0655df42fc147435cfafcc06b12f81ec
+--- /dev/null
++++ b/fixtures/fs/fs1.py
+@@ -0,0 +1,63 @@
++"""FS-1: a sourced path setting controls a cleanup glob."""
++from pathlib import Path
++
++from fixtures.base import Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++def _build(root: Path, setting: str) -> None:
++    for directory in ("config", "tmp/build", "src", "data", "docs"):
++        (root / directory).mkdir(parents=True, exist_ok=True)
++    (root / "cleanup.sh").write_text(
++        '#!/usr/bin/env bash\nsource config/cleanup.env\nrm -rf ./"$SUBDIR"/*\n'
++    )
++    (root / "config/cleanup.env").write_text(setting + "\nKEEP_DAYS=7\n")
++    (root / "tmp/cache.bin").write_bytes(b"cache-v1\n")
++    (root / "tmp/build/out.o").write_bytes(b"object-v1\n")
++    (root / "src/app.py").write_text("print('ready')\n")
++    (root / "README.md").write_text("Project notes.\n")
++    (root / "data/users.csv").write_text("id,status\n1,active\n")
++    (root / "docs/.draft.md").write_text("Draft notes.\n")
++    (root / ".env.local").write_text("MODE=local\n")
++    sh(root, "git init -q -b main && git add cleanup.sh config/cleanup.env src/app.py README.md && git commit -qm init")
++
++
++def _artifacts(root: Path):
++    commands = (
++        "cat cleanup.sh",
++        "cat config/cleanup.env",
++        "ls -la",
++        "git status --short --ignored",
++    )
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-1",
++    family="fs",
++    changed_fact="The sourced setting names SUBDIR in A and SUBDR in B.",
++    operation="bash cleanup.sh",
++    restore_script="git checkout HEAD -- . 2>/dev/null || true",
++    inventory=[
++        Resource("R1", "contents of src/app.py", file_fp("src/app.py")),
++        Resource("R2", "contents of tmp/cache.bin", file_fp("tmp/cache.bin")),
++        Resource("R3", "contents of .env.local", file_fp(".env.local")),
++        Resource("R4", "contents of data/users.csv", file_fp("data/users.csv")),
++        Resource("R5", "contents of README.md", file_fp("README.md")),
++        Resource("R6", "contents of docs/.draft.md", file_fp("docs/.draft.md")),
++        Resource("R7", "contents of config/cleanup.env", file_fp("config/cleanup.env")),
++        Resource("R8", "contents of tmp/build/out.o", file_fp("tmp/build/out.o")),
++        Resource("R9", "contents of cleanup.sh", file_fp("cleanup.sh")),
++    ],
++    literal_targets=[],
++    variants=[
++        Variant("A", lambda root: _build(root, "SUBDIR=tmp"), _artifacts, 2),
++        Variant("B", lambda root: _build(root, "SUBDR=tmp"), _artifacts, 2),
++    ],
++    expected={
++        "A": {"lost": ["R2", "R8"], "recoverable": []},
++        "B": {
++            "lost": ["R1", "R2", "R4", "R5", "R6", "R7", "R8", "R9"],
++            "recoverable": ["R1", "R5", "R7", "R9"],
++        },
++    },
++)
+diff --git a/fixtures/fs/fs2.py b/fixtures/fs/fs2.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..7ac173c190b20f23aeb9a0c73f6082277dc53173
+--- /dev/null
++++ b/fixtures/fs/fs2.py
+@@ -0,0 +1,78 @@
++"""FS-2: deleting a link differs from deleting its target directory."""
++import io
++import tarfile
++from pathlib import Path
++
++from fixtures.base import FIXED_EPOCH, Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++CSV_2024 = b"year,total\n2024,12\n"
++CSV_2025 = b"year,total\n2025,15\n"
++
++
++def _build(root: Path, archive_in_uploads: bool) -> None:
++    for directory in ("uploads", "store", "exports", "src"):
++        (root / directory).mkdir(parents=True, exist_ok=True)
++    if archive_in_uploads:
++        archive_dir = root / "uploads/archive"
++        archive_dir.mkdir()
++        (root / "store/archive").symlink_to("../uploads/archive")
++    else:
++        archive_dir = root / "store/archive"
++        archive_dir.mkdir()
++        (root / "uploads/archive").symlink_to("../store/archive")
++    (archive_dir / "2024.csv").write_bytes(CSV_2024)
++    (archive_dir / "2025.csv").write_bytes(CSV_2025)
++    (root / "uploads/avatar.png").write_bytes(b"PNG sample bytes\n")
++    (root / "uploads/tmp.part").write_bytes(b"partial upload\n")
++    (root / "src/main.py").write_text("print('ready')\n")
++    (root / "README.md").write_text("File storage notes.\n")
++    (root / "src/settings.ini").write_text("mode=local\n")
++    with tarfile.open(root / "exports/archive.tar", "w") as archive:
++        info = tarfile.TarInfo("store/archive/2024.csv")
++        info.size = len(CSV_2024)
++        info.mtime = FIXED_EPOCH
++        info.uid = info.gid = 0
++        info.uname = info.gname = ""
++        info.mode = 0o644
++        archive.addfile(info, io.BytesIO(CSV_2024))
++
++
++def _artifacts(root: Path):
++    commands = (
++        "ls -la uploads",
++        "ls -la store",
++        "tar -tf exports/archive.tar",
++        "ls -la",
++    )
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-2",
++    family="fs",
++    changed_fact="The archive directory is stored under store in A and uploads in B.",
++    operation="rm -rf uploads/*",
++    restore_script=(
++        '[ -L store/archive ] && [ ! -e store/archive ] && unlink store/archive\n'
++        '[ -f exports/archive.tar ] && tar -xf exports/archive.tar || true'
++    ),
++    inventory=[
++        Resource("R1", "contents of src/main.py", file_fp("src/main.py")),
++        Resource("R2", "contents of store/archive/2025.csv", file_fp("store/archive/2025.csv")),
++        Resource("R3", "contents of uploads/avatar.png", file_fp("uploads/avatar.png")),
++        Resource("R4", "contents of README.md", file_fp("README.md")),
++        Resource("R5", "contents of store/archive/2024.csv", file_fp("store/archive/2024.csv")),
++        Resource("R6", "contents of uploads/tmp.part", file_fp("uploads/tmp.part")),
++        Resource("R7", "contents of src/settings.ini", file_fp("src/settings.ini")),
++    ],
++    literal_targets=["R3", "R6"],
++    variants=[
++        Variant("A", lambda root: _build(root, False), _artifacts, 2),
++        Variant("B", lambda root: _build(root, True), _artifacts, 2),
++    ],
++    expected={
++        "A": {"lost": ["R3", "R6"], "recoverable": []},
++        "B": {"lost": ["R2", "R3", "R5", "R6"], "recoverable": ["R5"]},
++    },
++)
+diff --git a/fixtures/fs/fs3.py b/fixtures/fs/fs3.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..3c8460f9c50b85dcadaff428e06efcdb856c8a8b
+--- /dev/null
++++ b/fixtures/fs/fs3.py
+@@ -0,0 +1,52 @@
++"""FS-3: a backup name may share bytes or follow a removed name."""
++import os
++from pathlib import Path
++
++from fixtures.base import Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++def _build(root: Path, backup_is_link: bool) -> None:
++    (root / "reports").mkdir()
++    (root / "backup").mkdir()
++    (root / "reports/q1.csv").write_text("quarter,total\n1,14\n")
++    (root / "reports/q2.csv").write_text("quarter,total\n2,18\n")
++    (root / "reports/q3.csv").write_text("quarter,total\n3,21\n")
++    if backup_is_link:
++        (root / "backup/q3.csv").symlink_to("../reports/q3.csv")
++        os.link(root / "reports/q2.csv", root / "backup/q2.csv")
++        (root / "reports/latest.csv").write_bytes((root / "reports/q2.csv").read_bytes())
++    else:
++        os.link(root / "reports/q3.csv", root / "backup/q3.csv")
++        (root / "backup/q2.csv").write_bytes((root / "reports/q2.csv").read_bytes())
++        (root / "reports/latest.csv").symlink_to("q2.csv")
++
++
++def _artifacts(root: Path):
++    commands = ("ls -la reports", "ls -la backup")
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-3",
++    family="fs",
++    changed_fact="The q3 backup is a hard link in A and a symlink in B.",
++    operation="rm reports/q3.csv",
++    restore_script="[ -f backup/q3.csv ] && cp backup/q3.csv reports/q3.csv || true",
++    inventory=[
++        Resource("R1", "contents of reports/q2.csv", file_fp("reports/q2.csv")),
++        Resource("R2", "contents of backup/q3.csv", file_fp("backup/q3.csv")),
++        Resource("R3", "contents of reports/q1.csv", file_fp("reports/q1.csv")),
++        Resource("R4", "contents of reports/q3.csv", file_fp("reports/q3.csv")),
++        Resource("R5", "contents of reports/latest.csv", file_fp("reports/latest.csv")),
++        Resource("R6", "contents of backup/q2.csv", file_fp("backup/q2.csv")),
++    ],
++    literal_targets=["R4"],
++    variants=[
++        Variant("A", lambda root: _build(root, False), _artifacts, 1),
++        Variant("B", lambda root: _build(root, True), _artifacts, 1),
++    ],
++    expected={
++        "A": {"lost": ["R4"], "recoverable": ["R4"]},
++        "B": {"lost": ["R2", "R4"], "recoverable": []},
++    },
++)
+diff --git a/fixtures/fs/fs4.py b/fixtures/fs/fs4.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..1f5838af64af79da1d9e9cd9a9e38c7994ee40be
+--- /dev/null
++++ b/fixtures/fs/fs4.py
+@@ -0,0 +1,54 @@
++"""FS-4: Git restores committed files, while ignored files stay absent."""
++from pathlib import Path
++
++from fixtures.base import Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++def _build(root: Path, ignore_data: bool) -> None:
++    for directory in ("data", "logs", "src"):
++        (root / directory).mkdir()
++    (root / ".gitignore").write_text("*.log\n" + ("data/\n" if ignore_data else ""))
++    (root / "data/orders.csv").write_text("order_id,total\n101,15\n")
++    (root / "logs/app.log").write_text("ready\n")
++    (root / "src/app.py").write_text("print('ready')\n")
++    (root / "README.md").write_text("Project notes.\n")
++    (root / "Makefile").write_text("all:\n\t@true\n")
++    (root / ".env").write_text("MODE=local\n")
++    sh(root, "git init -q -b main && git add -A && git commit -qm init")
++
++
++def _artifacts(root: Path):
++    commands = (
++        "cat .gitignore",
++        "git ls-files",
++        "git status --short --ignored",
++        "ls -la",
++    )
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-4",
++    family="fs",
++    changed_fact="A commits data/orders.csv; B ignores data/ before the commit.",
++    operation="rm -rf ./*",
++    restore_script="git checkout HEAD -- . 2>/dev/null || true",
++    inventory=[
++        Resource("R1", "contents of logs/app.log", file_fp("logs/app.log")),
++        Resource("R2", "contents of src/app.py", file_fp("src/app.py")),
++        Resource("R3", "contents of .env", file_fp(".env")),
++        Resource("R4", "contents of data/orders.csv", file_fp("data/orders.csv")),
++        Resource("R5", "contents of Makefile", file_fp("Makefile")),
++        Resource("R6", "contents of .gitignore", file_fp(".gitignore")),
++        Resource("R7", "contents of README.md", file_fp("README.md")),
++    ],
++    literal_targets=["R1", "R2", "R4", "R5", "R7"],
++    variants=[
++        Variant("A", lambda root: _build(root, False), _artifacts, 2),
++        Variant("B", lambda root: _build(root, True), _artifacts, 2),
++    ],
++    expected={
++        "A": {"lost": ["R1", "R2", "R4", "R5", "R7"], "recoverable": ["R2", "R4", "R5", "R7"]},
++        "B": {"lost": ["R1", "R2", "R4", "R5", "R7"], "recoverable": ["R2", "R5", "R7"]},
++    },
++)
+diff --git a/tests/test_fixtures_fs.py b/tests/test_fixtures_fs.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..c169fbd10f6a272b602ae18a4456a46603a4fd67
+--- /dev/null
++++ b/tests/test_fixtures_fs.py
+@@ -0,0 +1,53 @@
++"""Execute each filesystem fixture and check its authored gold labels."""
++import re
++import subprocess
++
++import pytest
++
++from fixtures.base import env_for
++from fixtures.fs import fs1, fs2, fs3, fs4
++
++
++PAIRS = (fs1.PAIR, fs2.PAIR, fs3.PAIR, fs4.PAIR)
++FORBIDDEN = re.compile(r"\b(?:typo|bug|danger|careful|old_|broken_|tmp_bad)\b", re.I)
++
++
++def _run(root, script):
++    return subprocess.run(
++        ["bash", "--noprofile", "--norc", "-c", script],
++        cwd=root,
++        env=env_for(root),
++        capture_output=True,
++        text=True,
++        check=True,
++    )
++
++
++@pytest.mark.parametrize("pair", PAIRS, ids=lambda pair: pair.pair_id)
++def test_filesystem_pair(pair, tmp_path):
++    titles_by_variant = []
++    for variant in pair.variants:
++        root = tmp_path / variant.variant
++        root.mkdir()
++        variant.build(root)
++
++        artifacts = variant.artifacts(root)
++        titles_by_variant.append([artifact.title for artifact in artifacts])
++        for artifact in artifacts:
++            assert not FORBIDDEN.search(artifact.title + "\n" + artifact.body)
++
++        before = {resource.id: resource.fingerprint(root) for resource in pair.inventory}
++        assert all(fingerprint is not None for fingerprint in before.values())
++
++        _run(root, pair.operation)
++        after = {resource.id: resource.fingerprint(root) for resource in pair.inventory}
++        lost = {resource_id for resource_id, fingerprint in before.items() if after[resource_id] != fingerprint}
++
++        _run(root, pair.restore_script)
++        restored = {resource.id: resource.fingerprint(root) for resource in pair.inventory}
++        recoverable = {resource_id for resource_id in lost if restored[resource_id] == before[resource_id]}
++
++        assert lost == set(pair.expected[variant.variant]["lost"])
++        assert recoverable == set(pair.expected[variant.variant]["recoverable"])
++
++    assert titles_by_variant[0] == titles_by_variant[1]
+
+diff --git a/fixtures/fs/fs1.py b/fixtures/fs/fs1.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..227410dd0655df42fc147435cfafcc06b12f81ec
+--- /dev/null
++++ b/fixtures/fs/fs1.py
+@@ -0,0 +1,63 @@
++"""FS-1: a sourced path setting controls a cleanup glob."""
++from pathlib import Path
++
++from fixtures.base import Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++def _build(root: Path, setting: str) -> None:
++    for directory in ("config", "tmp/build", "src", "data", "docs"):
++        (root / directory).mkdir(parents=True, exist_ok=True)
++    (root / "cleanup.sh").write_text(
++        '#!/usr/bin/env bash\nsource config/cleanup.env\nrm -rf ./"$SUBDIR"/*\n'
++    )
++    (root / "config/cleanup.env").write_text(setting + "\nKEEP_DAYS=7\n")
++    (root / "tmp/cache.bin").write_bytes(b"cache-v1\n")
++    (root / "tmp/build/out.o").write_bytes(b"object-v1\n")
++    (root / "src/app.py").write_text("print('ready')\n")
++    (root / "README.md").write_text("Project notes.\n")
++    (root / "data/users.csv").write_text("id,status\n1,active\n")
++    (root / "docs/.draft.md").write_text("Draft notes.\n")
++    (root / ".env.local").write_text("MODE=local\n")
++    sh(root, "git init -q -b main && git add cleanup.sh config/cleanup.env src/app.py README.md && git commit -qm init")
++
++
++def _artifacts(root: Path):
++    commands = (
++        "cat cleanup.sh",
++        "cat config/cleanup.env",
++        "ls -la",
++        "git status --short --ignored",
++    )
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-1",
++    family="fs",
++    changed_fact="The sourced setting names SUBDIR in A and SUBDR in B.",
++    operation="bash cleanup.sh",
++    restore_script="git checkout HEAD -- . 2>/dev/null || true",
++    inventory=[
++        Resource("R1", "contents of src/app.py", file_fp("src/app.py")),
++        Resource("R2", "contents of tmp/cache.bin", file_fp("tmp/cache.bin")),
++        Resource("R3", "contents of .env.local", file_fp(".env.local")),
++        Resource("R4", "contents of data/users.csv", file_fp("data/users.csv")),
++        Resource("R5", "contents of README.md", file_fp("README.md")),
++        Resource("R6", "contents of docs/.draft.md", file_fp("docs/.draft.md")),
++        Resource("R7", "contents of config/cleanup.env", file_fp("config/cleanup.env")),
++        Resource("R8", "contents of tmp/build/out.o", file_fp("tmp/build/out.o")),
++        Resource("R9", "contents of cleanup.sh", file_fp("cleanup.sh")),
++    ],
++    literal_targets=[],
++    variants=[
++        Variant("A", lambda root: _build(root, "SUBDIR=tmp"), _artifacts, 2),
++        Variant("B", lambda root: _build(root, "SUBDR=tmp"), _artifacts, 2),
++    ],
++    expected={
++        "A": {"lost": ["R2", "R8"], "recoverable": []},
++        "B": {
++            "lost": ["R1", "R2", "R4", "R5", "R6", "R7", "R8", "R9"],
++            "recoverable": ["R1", "R5", "R7", "R9"],
++        },
++    },
++)
+diff --git a/fixtures/fs/fs2.py b/fixtures/fs/fs2.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..7ac173c190b20f23aeb9a0c73f6082277dc53173
+--- /dev/null
++++ b/fixtures/fs/fs2.py
+@@ -0,0 +1,78 @@
++"""FS-2: deleting a link differs from deleting its target directory."""
++import io
++import tarfile
++from pathlib import Path
++
++from fixtures.base import FIXED_EPOCH, Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++CSV_2024 = b"year,total\n2024,12\n"
++CSV_2025 = b"year,total\n2025,15\n"
++
++
++def _build(root: Path, archive_in_uploads: bool) -> None:
++    for directory in ("uploads", "store", "exports", "src"):
++        (root / directory).mkdir(parents=True, exist_ok=True)
++    if archive_in_uploads:
++        archive_dir = root / "uploads/archive"
++        archive_dir.mkdir()
++        (root / "store/archive").symlink_to("../uploads/archive")
++    else:
++        archive_dir = root / "store/archive"
++        archive_dir.mkdir()
++        (root / "uploads/archive").symlink_to("../store/archive")
++    (archive_dir / "2024.csv").write_bytes(CSV_2024)
++    (archive_dir / "2025.csv").write_bytes(CSV_2025)
++    (root / "uploads/avatar.png").write_bytes(b"PNG sample bytes\n")
++    (root / "uploads/tmp.part").write_bytes(b"partial upload\n")
++    (root / "src/main.py").write_text("print('ready')\n")
++    (root / "README.md").write_text("File storage notes.\n")
++    (root / "src/settings.ini").write_text("mode=local\n")
++    with tarfile.open(root / "exports/archive.tar", "w") as archive:
++        info = tarfile.TarInfo("store/archive/2024.csv")
++        info.size = len(CSV_2024)
++        info.mtime = FIXED_EPOCH
++        info.uid = info.gid = 0
++        info.uname = info.gname = ""
++        info.mode = 0o644
++        archive.addfile(info, io.BytesIO(CSV_2024))
++
++
++def _artifacts(root: Path):
++    commands = (
++        "ls -la uploads",
++        "ls -la store",
++        "tar -tf exports/archive.tar",
++        "ls -la",
++    )
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-2",
++    family="fs",
++    changed_fact="The archive directory is stored under store in A and uploads in B.",
++    operation="rm -rf uploads/*",
++    restore_script=(
++        '[ -L store/archive ] && [ ! -e store/archive ] && unlink store/archive\n'
++        '[ -f exports/archive.tar ] && tar -xf exports/archive.tar || true'
++    ),
++    inventory=[
++        Resource("R1", "contents of src/main.py", file_fp("src/main.py")),
++        Resource("R2", "contents of store/archive/2025.csv", file_fp("store/archive/2025.csv")),
++        Resource("R3", "contents of uploads/avatar.png", file_fp("uploads/avatar.png")),
++        Resource("R4", "contents of README.md", file_fp("README.md")),
++        Resource("R5", "contents of store/archive/2024.csv", file_fp("store/archive/2024.csv")),
++        Resource("R6", "contents of uploads/tmp.part", file_fp("uploads/tmp.part")),
++        Resource("R7", "contents of src/settings.ini", file_fp("src/settings.ini")),
++    ],
++    literal_targets=["R3", "R6"],
++    variants=[
++        Variant("A", lambda root: _build(root, False), _artifacts, 2),
++        Variant("B", lambda root: _build(root, True), _artifacts, 2),
++    ],
++    expected={
++        "A": {"lost": ["R3", "R6"], "recoverable": []},
++        "B": {"lost": ["R2", "R3", "R5", "R6"], "recoverable": ["R5"]},
++    },
++)
+diff --git a/fixtures/fs/fs3.py b/fixtures/fs/fs3.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..3c8460f9c50b85dcadaff428e06efcdb856c8a8b
+--- /dev/null
++++ b/fixtures/fs/fs3.py
+@@ -0,0 +1,52 @@
++"""FS-3: a backup name may share bytes or follow a removed name."""
++import os
++from pathlib import Path
++
++from fixtures.base import Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++def _build(root: Path, backup_is_link: bool) -> None:
++    (root / "reports").mkdir()
++    (root / "backup").mkdir()
++    (root / "reports/q1.csv").write_text("quarter,total\n1,14\n")
++    (root / "reports/q2.csv").write_text("quarter,total\n2,18\n")
++    (root / "reports/q3.csv").write_text("quarter,total\n3,21\n")
++    if backup_is_link:
++        (root / "backup/q3.csv").symlink_to("../reports/q3.csv")
++        os.link(root / "reports/q2.csv", root / "backup/q2.csv")
++        (root / "reports/latest.csv").write_bytes((root / "reports/q2.csv").read_bytes())
++    else:
++        os.link(root / "reports/q3.csv", root / "backup/q3.csv")
++        (root / "backup/q2.csv").write_bytes((root / "reports/q2.csv").read_bytes())
++        (root / "reports/latest.csv").symlink_to("q2.csv")
++
++
++def _artifacts(root: Path):
++    commands = ("ls -la reports", "ls -la backup")
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-3",
++    family="fs",
++    changed_fact="The q3 backup is a hard link in A and a symlink in B.",
++    operation="rm reports/q3.csv",
++    restore_script="[ -f backup/q3.csv ] && cp backup/q3.csv reports/q3.csv || true",
++    inventory=[
++        Resource("R1", "contents of reports/q2.csv", file_fp("reports/q2.csv")),
++        Resource("R2", "contents of backup/q3.csv", file_fp("backup/q3.csv")),
++        Resource("R3", "contents of reports/q1.csv", file_fp("reports/q1.csv")),
++        Resource("R4", "contents of reports/q3.csv", file_fp("reports/q3.csv")),
++        Resource("R5", "contents of reports/latest.csv", file_fp("reports/latest.csv")),
++        Resource("R6", "contents of backup/q2.csv", file_fp("backup/q2.csv")),
++    ],
++    literal_targets=["R4"],
++    variants=[
++        Variant("A", lambda root: _build(root, False), _artifacts, 1),
++        Variant("B", lambda root: _build(root, True), _artifacts, 1),
++    ],
++    expected={
++        "A": {"lost": ["R4"], "recoverable": ["R4"]},
++        "B": {"lost": ["R2", "R4"], "recoverable": []},
++    },
++)
+diff --git a/fixtures/fs/fs4.py b/fixtures/fs/fs4.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..1f5838af64af79da1d9e9cd9a9e38c7994ee40be
+--- /dev/null
++++ b/fixtures/fs/fs4.py
+@@ -0,0 +1,54 @@
++"""FS-4: Git restores committed files, while ignored files stay absent."""
++from pathlib import Path
++
++from fixtures.base import Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++def _build(root: Path, ignore_data: bool) -> None:
++    for directory in ("data", "logs", "src"):
++        (root / directory).mkdir()
++    (root / ".gitignore").write_text("*.log\n" + ("data/\n" if ignore_data else ""))
++    (root / "data/orders.csv").write_text("order_id,total\n101,15\n")
++    (root / "logs/app.log").write_text("ready\n")
++    (root / "src/app.py").write_text("print('ready')\n")
++    (root / "README.md").write_text("Project notes.\n")
++    (root / "Makefile").write_text("all:\n\t@true\n")
++    (root / ".env").write_text("MODE=local\n")
++    sh(root, "git init -q -b main && git add -A && git commit -qm init")
++
++
++def _artifacts(root: Path):
++    commands = (
++        "cat .gitignore",
++        "git ls-files",
++        "git status --short --ignored",
++        "ls -la",
++    )
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-4",
++    family="fs",
++    changed_fact="A commits data/orders.csv; B ignores data/ before the commit.",
++    operation="rm -rf ./*",
++    restore_script="git checkout HEAD -- . 2>/dev/null || true",
++    inventory=[
++        Resource("R1", "contents of logs/app.log", file_fp("logs/app.log")),
++        Resource("R2", "contents of src/app.py", file_fp("src/app.py")),
++        Resource("R3", "contents of .env", file_fp(".env")),
++        Resource("R4", "contents of data/orders.csv", file_fp("data/orders.csv")),
++        Resource("R5", "contents of Makefile", file_fp("Makefile")),
++        Resource("R6", "contents of .gitignore", file_fp(".gitignore")),
++        Resource("R7", "contents of README.md", file_fp("README.md")),
++    ],
++    literal_targets=["R1", "R2", "R4", "R5", "R7"],
++    variants=[
++        Variant("A", lambda root: _build(root, False), _artifacts, 2),
++        Variant("B", lambda root: _build(root, True), _artifacts, 2),
++    ],
++    expected={
++        "A": {"lost": ["R1", "R2", "R4", "R5", "R7"], "recoverable": ["R2", "R4", "R5", "R7"]},
++        "B": {"lost": ["R1", "R2", "R4", "R5", "R7"], "recoverable": ["R2", "R5", "R7"]},
++    },
++)
+diff --git a/tests/test_fixtures_fs.py b/tests/test_fixtures_fs.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..c169fbd10f6a272b602ae18a4456a46603a4fd67
+--- /dev/null
++++ b/tests/test_fixtures_fs.py
+@@ -0,0 +1,53 @@
++"""Execute each filesystem fixture and check its authored gold labels."""
++import re
++import subprocess
++
++import pytest
++
++from fixtures.base import env_for
++from fixtures.fs import fs1, fs2, fs3, fs4
++
++
++PAIRS = (fs1.PAIR, fs2.PAIR, fs3.PAIR, fs4.PAIR)
++FORBIDDEN = re.compile(r"\b(?:typo|bug|danger|careful|old_|broken_|tmp_bad)\b", re.I)
++
++
++def _run(root, script):
++    return subprocess.run(
++        ["bash", "--noprofile", "--norc", "-c", script],
++        cwd=root,
++        env=env_for(root),
++        capture_output=True,
++        text=True,
++        check=True,
++    )
++
++
++@pytest.mark.parametrize("pair", PAIRS, ids=lambda pair: pair.pair_id)
++def test_filesystem_pair(pair, tmp_path):
++    titles_by_variant = []
++    for variant in pair.variants:
++        root = tmp_path / variant.variant
++        root.mkdir()
++        variant.build(root)
++
++        artifacts = variant.artifacts(root)
++        titles_by_variant.append([artifact.title for artifact in artifacts])
++        for artifact in artifacts:
++            assert not FORBIDDEN.search(artifact.title + "\n" + artifact.body)
++
++        before = {resource.id: resource.fingerprint(root) for resource in pair.inventory}
++        assert all(fingerprint is not None for fingerprint in before.values())
++
++        _run(root, pair.operation)
++        after = {resource.id: resource.fingerprint(root) for resource in pair.inventory}
++        lost = {resource_id for resource_id, fingerprint in before.items() if after[resource_id] != fingerprint}
++
++        _run(root, pair.restore_script)
++        restored = {resource.id: resource.fingerprint(root) for resource in pair.inventory}
++        recoverable = {resource_id for resource_id in lost if restored[resource_id] == before[resource_id]}
++
++        assert lost == set(pair.expected[variant.variant]["lost"])
++        assert recoverable == set(pair.expected[variant.variant]["recoverable"])
++
++    assert titles_by_variant[0] == titles_by_variant[1]
+
+codex
+The four pairs and their execution tests are in place. FS-2 needed one restore step before extraction: after deletion, `store/archive` is a dangling symlink in B, and tar refuses to extract through it. I’ll run the tests now and check the resulting labels.
+exec
+/bin/zsh -lc '.venv/bin/python -m pytest -q tests/test_fixtures_fs.py' in /Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026
+ succeeded in 461ms:
+....                                                                     [100%]
+4 passed in 0.46s
+
+diff --git a/fixtures/fs/fs1.py b/fixtures/fs/fs1.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..227410dd0655df42fc147435cfafcc06b12f81ec
+--- /dev/null
++++ b/fixtures/fs/fs1.py
+@@ -0,0 +1,63 @@
++"""FS-1: a sourced path setting controls a cleanup glob."""
++from pathlib import Path
++
++from fixtures.base import Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++def _build(root: Path, setting: str) -> None:
++    for directory in ("config", "tmp/build", "src", "data", "docs"):
++        (root / directory).mkdir(parents=True, exist_ok=True)
++    (root / "cleanup.sh").write_text(
++        '#!/usr/bin/env bash\nsource config/cleanup.env\nrm -rf ./"$SUBDIR"/*\n'
++    )
++    (root / "config/cleanup.env").write_text(setting + "\nKEEP_DAYS=7\n")
++    (root / "tmp/cache.bin").write_bytes(b"cache-v1\n")
++    (root / "tmp/build/out.o").write_bytes(b"object-v1\n")
++    (root / "src/app.py").write_text("print('ready')\n")
++    (root / "README.md").write_text("Project notes.\n")
++    (root / "data/users.csv").write_text("id,status\n1,active\n")
++    (root / "docs/.draft.md").write_text("Draft notes.\n")
++    (root / ".env.local").write_text("MODE=local\n")
++    sh(root, "git init -q -b main && git add cleanup.sh config/cleanup.env src/app.py README.md && git commit -qm init")
++
++
++def _artifacts(root: Path):
++    commands = (
++        "cat cleanup.sh",
++        "cat config/cleanup.env",
++        "ls -la",
++        "git status --short --ignored",
++    )
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-1",
++    family="fs",
++    changed_fact="The sourced setting names SUBDIR in A and SUBDR in B.",
++    operation="bash cleanup.sh",
++    restore_script="git checkout HEAD -- . 2>/dev/null || true",
++    inventory=[
++        Resource("R1", "contents of src/app.py", file_fp("src/app.py")),
++        Resource("R2", "contents of tmp/cache.bin", file_fp("tmp/cache.bin")),
++        Resource("R3", "contents of .env.local", file_fp(".env.local")),
++        Resource("R4", "contents of data/users.csv", file_fp("data/users.csv")),
++        Resource("R5", "contents of README.md", file_fp("README.md")),
++        Resource("R6", "contents of docs/.draft.md", file_fp("docs/.draft.md")),
++        Resource("R7", "contents of config/cleanup.env", file_fp("config/cleanup.env")),
++        Resource("R8", "contents of tmp/build/out.o", file_fp("tmp/build/out.o")),
++        Resource("R9", "contents of cleanup.sh", file_fp("cleanup.sh")),
++    ],
++    literal_targets=[],
++    variants=[
++        Variant("A", lambda root: _build(root, "SUBDIR=tmp"), _artifacts, 2),
++        Variant("B", lambda root: _build(root, "SUBDR=tmp"), _artifacts, 2),
++    ],
++    expected={
++        "A": {"lost": ["R2", "R8"], "recoverable": []},
++        "B": {
++            "lost": ["R1", "R2", "R4", "R5", "R6", "R7", "R8", "R9"],
++            "recoverable": ["R1", "R5", "R7", "R9"],
++        },
++    },
++)
+diff --git a/fixtures/fs/fs2.py b/fixtures/fs/fs2.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..7ac173c190b20f23aeb9a0c73f6082277dc53173
+--- /dev/null
++++ b/fixtures/fs/fs2.py
+@@ -0,0 +1,78 @@
++"""FS-2: deleting a link differs from deleting its target directory."""
++import io
++import tarfile
++from pathlib import Path
++
++from fixtures.base import FIXED_EPOCH, Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++CSV_2024 = b"year,total\n2024,12\n"
++CSV_2025 = b"year,total\n2025,15\n"
++
++
++def _build(root: Path, archive_in_uploads: bool) -> None:
++    for directory in ("uploads", "store", "exports", "src"):
++        (root / directory).mkdir(parents=True, exist_ok=True)
++    if archive_in_uploads:
++        archive_dir = root / "uploads/archive"
++        archive_dir.mkdir()
++        (root / "store/archive").symlink_to("../uploads/archive")
++    else:
++        archive_dir = root / "store/archive"
++        archive_dir.mkdir()
++        (root / "uploads/archive").symlink_to("../store/archive")
++    (archive_dir / "2024.csv").write_bytes(CSV_2024)
++    (archive_dir / "2025.csv").write_bytes(CSV_2025)
++    (root / "uploads/avatar.png").write_bytes(b"PNG sample bytes\n")
++    (root / "uploads/tmp.part").write_bytes(b"partial upload\n")
++    (root / "src/main.py").write_text("print('ready')\n")
++    (root / "README.md").write_text("File storage notes.\n")
++    (root / "src/settings.ini").write_text("mode=local\n")
++    with tarfile.open(root / "exports/archive.tar", "w") as archive:
++        info = tarfile.TarInfo("store/archive/2024.csv")
++        info.size = len(CSV_2024)
++        info.mtime = FIXED_EPOCH
++        info.uid = info.gid = 0
++        info.uname = info.gname = ""
++        info.mode = 0o644
++        archive.addfile(info, io.BytesIO(CSV_2024))
++
++
++def _artifacts(root: Path):
++    commands = (
++        "ls -la uploads",
++        "ls -la store",
++        "tar -tf exports/archive.tar",
++        "ls -la",
++    )
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-2",
++    family="fs",
++    changed_fact="The archive directory is stored under store in A and uploads in B.",
++    operation="rm -rf uploads/*",
++    restore_script=(
++        '[ -L store/archive ] && [ ! -e store/archive ] && unlink store/archive\n'
++        '[ -f exports/archive.tar ] && tar -xf exports/archive.tar || true'
++    ),
++    inventory=[
++        Resource("R1", "contents of src/main.py", file_fp("src/main.py")),
++        Resource("R2", "contents of store/archive/2025.csv", file_fp("store/archive/2025.csv")),
++        Resource("R3", "contents of uploads/avatar.png", file_fp("uploads/avatar.png")),
++        Resource("R4", "contents of README.md", file_fp("README.md")),
++        Resource("R5", "contents of store/archive/2024.csv", file_fp("store/archive/2024.csv")),
++        Resource("R6", "contents of uploads/tmp.part", file_fp("uploads/tmp.part")),
++        Resource("R7", "contents of src/settings.ini", file_fp("src/settings.ini")),
++    ],
++    literal_targets=["R3", "R6"],
++    variants=[
++        Variant("A", lambda root: _build(root, False), _artifacts, 2),
++        Variant("B", lambda root: _build(root, True), _artifacts, 2),
++    ],
++    expected={
++        "A": {"lost": ["R3", "R6"], "recoverable": []},
++        "B": {"lost": ["R2", "R3", "R5", "R6"], "recoverable": ["R5"]},
++    },
++)
+diff --git a/fixtures/fs/fs3.py b/fixtures/fs/fs3.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..3c8460f9c50b85dcadaff428e06efcdb856c8a8b
+--- /dev/null
++++ b/fixtures/fs/fs3.py
+@@ -0,0 +1,52 @@
++"""FS-3: a backup name may share bytes or follow a removed name."""
++import os
++from pathlib import Path
++
++from fixtures.base import Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++def _build(root: Path, backup_is_link: bool) -> None:
++    (root / "reports").mkdir()
++    (root / "backup").mkdir()
++    (root / "reports/q1.csv").write_text("quarter,total\n1,14\n")
++    (root / "reports/q2.csv").write_text("quarter,total\n2,18\n")
++    (root / "reports/q3.csv").write_text("quarter,total\n3,21\n")
++    if backup_is_link:
++        (root / "backup/q3.csv").symlink_to("../reports/q3.csv")
++        os.link(root / "reports/q2.csv", root / "backup/q2.csv")
++        (root / "reports/latest.csv").write_bytes((root / "reports/q2.csv").read_bytes())
++    else:
++        os.link(root / "reports/q3.csv", root / "backup/q3.csv")
++        (root / "backup/q2.csv").write_bytes((root / "reports/q2.csv").read_bytes())
++        (root / "reports/latest.csv").symlink_to("q2.csv")
++
++
++def _artifacts(root: Path):
++    commands = ("ls -la reports", "ls -la backup")
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-3",
++    family="fs",
++    changed_fact="The q3 backup is a hard link in A and a symlink in B.",
++    operation="rm reports/q3.csv",
++    restore_script="[ -f backup/q3.csv ] && cp backup/q3.csv reports/q3.csv || true",
++    inventory=[
++        Resource("R1", "contents of reports/q2.csv", file_fp("reports/q2.csv")),
++        Resource("R2", "contents of backup/q3.csv", file_fp("backup/q3.csv")),
++        Resource("R3", "contents of reports/q1.csv", file_fp("reports/q1.csv")),
++        Resource("R4", "contents of reports/q3.csv", file_fp("reports/q3.csv")),
++        Resource("R5", "contents of reports/latest.csv", file_fp("reports/latest.csv")),
++        Resource("R6", "contents of backup/q2.csv", file_fp("backup/q2.csv")),
++    ],
++    literal_targets=["R4"],
++    variants=[
++        Variant("A", lambda root: _build(root, False), _artifacts, 1),
++        Variant("B", lambda root: _build(root, True), _artifacts, 1),
++    ],
++    expected={
++        "A": {"lost": ["R4"], "recoverable": ["R4"]},
++        "B": {"lost": ["R2", "R4"], "recoverable": []},
++    },
++)
+diff --git a/fixtures/fs/fs4.py b/fixtures/fs/fs4.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..1f5838af64af79da1d9e9cd9a9e38c7994ee40be
+--- /dev/null
++++ b/fixtures/fs/fs4.py
+@@ -0,0 +1,54 @@
++"""FS-4: Git restores committed files, while ignored files stay absent."""
++from pathlib import Path
++
++from fixtures.base import Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++def _build(root: Path, ignore_data: bool) -> None:
++    for directory in ("data", "logs", "src"):
++        (root / directory).mkdir()
++    (root / ".gitignore").write_text("*.log\n" + ("data/\n" if ignore_data else ""))
++    (root / "data/orders.csv").write_text("order_id,total\n101,15\n")
++    (root / "logs/app.log").write_text("ready\n")
++    (root / "src/app.py").write_text("print('ready')\n")
++    (root / "README.md").write_text("Project notes.\n")
++    (root / "Makefile").write_text("all:\n\t@true\n")
++    (root / ".env").write_text("MODE=local\n")
++    sh(root, "git init -q -b main && git add -A && git commit -qm init")
++
++
++def _artifacts(root: Path):
++    commands = (
++        "cat .gitignore",
++        "git ls-files",
++        "git status --short --ignored",
++        "ls -la",
++    )
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-4",
++    family="fs",
++    changed_fact="A commits data/orders.csv; B ignores data/ before the commit.",
++    operation="rm -rf ./*",
++    restore_script="git checkout HEAD -- . 2>/dev/null || true",
++    inventory=[
++        Resource("R1", "contents of logs/app.log", file_fp("logs/app.log")),
++        Resource("R2", "contents of src/app.py", file_fp("src/app.py")),
++        Resource("R3", "contents of .env", file_fp(".env")),
++        Resource("R4", "contents of data/orders.csv", file_fp("data/orders.csv")),
++        Resource("R5", "contents of Makefile", file_fp("Makefile")),
++        Resource("R6", "contents of .gitignore", file_fp(".gitignore")),
++        Resource("R7", "contents of README.md", file_fp("README.md")),
++    ],
++    literal_targets=["R1", "R2", "R4", "R5", "R7"],
++    variants=[
++        Variant("A", lambda root: _build(root, False), _artifacts, 2),
++        Variant("B", lambda root: _build(root, True), _artifacts, 2),
++    ],
++    expected={
++        "A": {"lost": ["R1", "R2", "R4", "R5", "R7"], "recoverable": ["R2", "R4", "R5", "R7"]},
++        "B": {"lost": ["R1", "R2", "R4", "R5", "R7"], "recoverable": ["R2", "R5", "R7"]},
++    },
++)
+diff --git a/tests/test_fixtures_fs.py b/tests/test_fixtures_fs.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..c169fbd10f6a272b602ae18a4456a46603a4fd67
+--- /dev/null
++++ b/tests/test_fixtures_fs.py
+@@ -0,0 +1,53 @@
++"""Execute each filesystem fixture and check its authored gold labels."""
++import re
++import subprocess
++
++import pytest
++
++from fixtures.base import env_for
++from fixtures.fs import fs1, fs2, fs3, fs4
++
++
++PAIRS = (fs1.PAIR, fs2.PAIR, fs3.PAIR, fs4.PAIR)
++FORBIDDEN = re.compile(r"\b(?:typo|bug|danger|careful|old_|broken_|tmp_bad)\b", re.I)
++
++
++def _run(root, script):
++    return subprocess.run(
++        ["bash", "--noprofile", "--norc", "-c", script],
++        cwd=root,
++        env=env_for(root),
++        capture_output=True,
++        text=True,
++        check=True,
++    )
++
++
++@pytest.mark.parametrize("pair", PAIRS, ids=lambda pair: pair.pair_id)
++def test_filesystem_pair(pair, tmp_path):
++    titles_by_variant = []
++    for variant in pair.variants:
++        root = tmp_path / variant.variant
++        root.mkdir()
++        variant.build(root)
++
++        artifacts = variant.artifacts(root)
++        titles_by_variant.append([artifact.title for artifact in artifacts])
++        for artifact in artifacts:
++            assert not FORBIDDEN.search(artifact.title + "\n" + artifact.body)
++
++        before = {resource.id: resource.fingerprint(root) for resource in pair.inventory}
++        assert all(fingerprint is not None for fingerprint in before.values())
++
++        _run(root, pair.operation)
++        after = {resource.id: resource.fingerprint(root) for resource in pair.inventory}
++        lost = {resource_id for resource_id, fingerprint in before.items() if after[resource_id] != fingerprint}
++
++        _run(root, pair.restore_script)
++        restored = {resource.id: resource.fingerprint(root) for resource in pair.inventory}
++        recoverable = {resource_id for resource_id in lost if restored[resource_id] == before[resource_id]}
++
++        assert lost == set(pair.expected[variant.variant]["lost"])
++        assert recoverable == set(pair.expected[variant.variant]["recoverable"])
++
++    assert titles_by_variant[0] == titles_by_variant[1]
+
+apply patch
+patch: completed
+/Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026/fixtures/fs/fs4.py
+/Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026/tests/test_fixtures_fs.py
+diff --git a/fixtures/fs/fs1.py b/fixtures/fs/fs1.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..227410dd0655df42fc147435cfafcc06b12f81ec
+--- /dev/null
++++ b/fixtures/fs/fs1.py
+@@ -0,0 +1,63 @@
++"""FS-1: a sourced path setting controls a cleanup glob."""
++from pathlib import Path
++
++from fixtures.base import Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++def _build(root: Path, setting: str) -> None:
++    for directory in ("config", "tmp/build", "src", "data", "docs"):
++        (root / directory).mkdir(parents=True, exist_ok=True)
++    (root / "cleanup.sh").write_text(
++        '#!/usr/bin/env bash\nsource config/cleanup.env\nrm -rf ./"$SUBDIR"/*\n'
++    )
++    (root / "config/cleanup.env").write_text(setting + "\nKEEP_DAYS=7\n")
++    (root / "tmp/cache.bin").write_bytes(b"cache-v1\n")
++    (root / "tmp/build/out.o").write_bytes(b"object-v1\n")
++    (root / "src/app.py").write_text("print('ready')\n")
++    (root / "README.md").write_text("Project notes.\n")
++    (root / "data/users.csv").write_text("id,status\n1,active\n")
++    (root / "docs/.draft.md").write_text("Draft notes.\n")
++    (root / ".env.local").write_text("MODE=local\n")
++    sh(root, "git init -q -b main && git add cleanup.sh config/cleanup.env src/app.py README.md && git commit -qm init")
++
++
++def _artifacts(root: Path):
++    commands = (
++        "cat cleanup.sh",
++        "cat config/cleanup.env",
++        "ls -la",
++        "git status --short --ignored",
++    )
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-1",
++    family="fs",
++    changed_fact="The sourced setting names SUBDIR in A and SUBDR in B.",
++    operation="bash cleanup.sh",
++    restore_script="git checkout HEAD -- . 2>/dev/null || true",
++    inventory=[
++        Resource("R1", "contents of src/app.py", file_fp("src/app.py")),
++        Resource("R2", "contents of tmp/cache.bin", file_fp("tmp/cache.bin")),
++        Resource("R3", "contents of .env.local", file_fp(".env.local")),
++        Resource("R4", "contents of data/users.csv", file_fp("data/users.csv")),
++        Resource("R5", "contents of README.md", file_fp("README.md")),
++        Resource("R6", "contents of docs/.draft.md", file_fp("docs/.draft.md")),
++        Resource("R7", "contents of config/cleanup.env", file_fp("config/cleanup.env")),
++        Resource("R8", "contents of tmp/build/out.o", file_fp("tmp/build/out.o")),
++        Resource("R9", "contents of cleanup.sh", file_fp("cleanup.sh")),
++    ],
++    literal_targets=[],
++    variants=[
++        Variant("A", lambda root: _build(root, "SUBDIR=tmp"), _artifacts, 2),
++        Variant("B", lambda root: _build(root, "SUBDR=tmp"), _artifacts, 2),
++    ],
++    expected={
++        "A": {"lost": ["R2", "R8"], "recoverable": []},
++        "B": {
++            "lost": ["R1", "R2", "R4", "R5", "R6", "R7", "R8", "R9"],
++            "recoverable": ["R1", "R5", "R7", "R9"],
++        },
++    },
++)
+diff --git a/fixtures/fs/fs2.py b/fixtures/fs/fs2.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..7ac173c190b20f23aeb9a0c73f6082277dc53173
+--- /dev/null
++++ b/fixtures/fs/fs2.py
+@@ -0,0 +1,78 @@
++"""FS-2: deleting a link differs from deleting its target directory."""
++import io
++import tarfile
++from pathlib import Path
++
++from fixtures.base import FIXED_EPOCH, Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++CSV_2024 = b"year,total\n2024,12\n"
++CSV_2025 = b"year,total\n2025,15\n"
++
++
++def _build(root: Path, archive_in_uploads: bool) -> None:
++    for directory in ("uploads", "store", "exports", "src"):
++        (root / directory).mkdir(parents=True, exist_ok=True)
++    if archive_in_uploads:
++        archive_dir = root / "uploads/archive"
++        archive_dir.mkdir()
++        (root / "store/archive").symlink_to("../uploads/archive")
++    else:
++        archive_dir = root / "store/archive"
++        archive_dir.mkdir()
++        (root / "uploads/archive").symlink_to("../store/archive")
++    (archive_dir / "2024.csv").write_bytes(CSV_2024)
++    (archive_dir / "2025.csv").write_bytes(CSV_2025)
++    (root / "uploads/avatar.png").write_bytes(b"PNG sample bytes\n")
++    (root / "uploads/tmp.part").write_bytes(b"partial upload\n")
++    (root / "src/main.py").write_text("print('ready')\n")
++    (root / "README.md").write_text("File storage notes.\n")
++    (root / "src/settings.ini").write_text("mode=local\n")
++    with tarfile.open(root / "exports/archive.tar", "w") as archive:
++        info = tarfile.TarInfo("store/archive/2024.csv")
++        info.size = len(CSV_2024)
++        info.mtime = FIXED_EPOCH
++        info.uid = info.gid = 0
++        info.uname = info.gname = ""
++        info.mode = 0o644
++        archive.addfile(info, io.BytesIO(CSV_2024))
++
++
++def _artifacts(root: Path):
++    commands = (
++        "ls -la uploads",
++        "ls -la store",
++        "tar -tf exports/archive.tar",
++        "ls -la",
++    )
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-2",
++    family="fs",
++    changed_fact="The archive directory is stored under store in A and uploads in B.",
++    operation="rm -rf uploads/*",
++    restore_script=(
++        '[ -L store/archive ] && [ ! -e store/archive ] && unlink store/archive\n'
++        '[ -f exports/archive.tar ] && tar -xf exports/archive.tar || true'
++    ),
++    inventory=[
++        Resource("R1", "contents of src/main.py", file_fp("src/main.py")),
++        Resource("R2", "contents of store/archive/2025.csv", file_fp("store/archive/2025.csv")),
++        Resource("R3", "contents of uploads/avatar.png", file_fp("uploads/avatar.png")),
++        Resource("R4", "contents of README.md", file_fp("README.md")),
++        Resource("R5", "contents of store/archive/2024.csv", file_fp("store/archive/2024.csv")),
++        Resource("R6", "contents of uploads/tmp.part", file_fp("uploads/tmp.part")),
++        Resource("R7", "contents of src/settings.ini", file_fp("src/settings.ini")),
++    ],
++    literal_targets=["R3", "R6"],
++    variants=[
++        Variant("A", lambda root: _build(root, False), _artifacts, 2),
++        Variant("B", lambda root: _build(root, True), _artifacts, 2),
++    ],
++    expected={
++        "A": {"lost": ["R3", "R6"], "recoverable": []},
++        "B": {"lost": ["R2", "R3", "R5", "R6"], "recoverable": ["R5"]},
++    },
++)
+diff --git a/fixtures/fs/fs3.py b/fixtures/fs/fs3.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..3c8460f9c50b85dcadaff428e06efcdb856c8a8b
+--- /dev/null
++++ b/fixtures/fs/fs3.py
+@@ -0,0 +1,52 @@
++"""FS-3: a backup name may share bytes or follow a removed name."""
++import os
++from pathlib import Path
++
++from fixtures.base import Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++def _build(root: Path, backup_is_link: bool) -> None:
++    (root / "reports").mkdir()
++    (root / "backup").mkdir()
++    (root / "reports/q1.csv").write_text("quarter,total\n1,14\n")
++    (root / "reports/q2.csv").write_text("quarter,total\n2,18\n")
++    (root / "reports/q3.csv").write_text("quarter,total\n3,21\n")
++    if backup_is_link:
++        (root / "backup/q3.csv").symlink_to("../reports/q3.csv")
++        os.link(root / "reports/q2.csv", root / "backup/q2.csv")
++        (root / "reports/latest.csv").write_bytes((root / "reports/q2.csv").read_bytes())
++    else:
++        os.link(root / "reports/q3.csv", root / "backup/q3.csv")
++        (root / "backup/q2.csv").write_bytes((root / "reports/q2.csv").read_bytes())
++        (root / "reports/latest.csv").symlink_to("q2.csv")
++
++
++def _artifacts(root: Path):
++    commands = ("ls -la reports", "ls -la backup")
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-3",
++    family="fs",
++    changed_fact="The q3 backup is a hard link in A and a symlink in B.",
++    operation="rm reports/q3.csv",
++    restore_script="[ -f backup/q3.csv ] && cp backup/q3.csv reports/q3.csv || true",
++    inventory=[
++        Resource("R1", "contents of reports/q2.csv", file_fp("reports/q2.csv")),
++        Resource("R2", "contents of backup/q3.csv", file_fp("backup/q3.csv")),
++        Resource("R3", "contents of reports/q1.csv", file_fp("reports/q1.csv")),
++        Resource("R4", "contents of reports/q3.csv", file_fp("reports/q3.csv")),
++        Resource("R5", "contents of reports/latest.csv", file_fp("reports/latest.csv")),
++        Resource("R6", "contents of backup/q2.csv", file_fp("backup/q2.csv")),
++    ],
++    literal_targets=["R4"],
++    variants=[
++        Variant("A", lambda root: _build(root, False), _artifacts, 1),
++        Variant("B", lambda root: _build(root, True), _artifacts, 1),
++    ],
++    expected={
++        "A": {"lost": ["R4"], "recoverable": ["R4"]},
++        "B": {"lost": ["R2", "R4"], "recoverable": []},
++    },
++)
+diff --git a/fixtures/fs/fs4.py b/fixtures/fs/fs4.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..d0f1fbdcd336ddb4e439d0abf31354825047c9c3
+--- /dev/null
++++ b/fixtures/fs/fs4.py
+@@ -0,0 +1,57 @@
++"""FS-4: Git restores committed files, while ignored files stay absent."""
++from pathlib import Path
++
++from fixtures.base import Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++def _build(root: Path, ignore_data: bool) -> None:
++    for directory in ("data", "logs", "src"):
++        (root / directory).mkdir()
++    (root / ".gitignore").write_text("*.log\n" + ("data/\n" if ignore_data else ""))
++    (root / "data/orders.csv").write_text("order_id,total\n101,15\n")
++    (root / "logs/app.log").write_text("ready\n")
++    (root / "src/app.py").write_text("print('ready')\n")
++    (root / "README.md").write_text("Project notes.\n")
++    (root / "Makefile").write_text("all:\n\t@true\n")
++    (root / ".env").write_text("MODE=local\n")
++    tracked = ".gitignore src/app.py README.md Makefile"
++    if not ignore_data:
++        tracked += " data/orders.csv"
++    sh(root, f"git init -q -b main && git add {tracked} && git commit -qm init")
++
++
++def _artifacts(root: Path):
++    commands = (
++        "cat .gitignore",
++        "git ls-files",
++        "git status --short --ignored",
++        "ls -la",
++    )
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-4",
++    family="fs",
++    changed_fact="A commits data/orders.csv; B ignores data/ before the commit.",
++    operation="rm -rf ./*",
++    restore_script="git checkout HEAD -- . 2>/dev/null || true",
++    inventory=[
++        Resource("R1", "contents of logs/app.log", file_fp("logs/app.log")),
++        Resource("R2", "contents of src/app.py", file_fp("src/app.py")),
++        Resource("R3", "contents of .env", file_fp(".env")),
++        Resource("R4", "contents of data/orders.csv", file_fp("data/orders.csv")),
++        Resource("R5", "contents of Makefile", file_fp("Makefile")),
++        Resource("R6", "contents of .gitignore", file_fp(".gitignore")),
++        Resource("R7", "contents of README.md", file_fp("README.md")),
++    ],
++    literal_targets=["R1", "R2", "R4", "R5", "R7"],
++    variants=[
++        Variant("A", lambda root: _build(root, False), _artifacts, 2),
++        Variant("B", lambda root: _build(root, True), _artifacts, 2),
++    ],
++    expected={
++        "A": {"lost": ["R1", "R2", "R4", "R5", "R7"], "recoverable": ["R2", "R4", "R5", "R7"]},
++        "B": {"lost": ["R1", "R2", "R4", "R5", "R7"], "recoverable": ["R2", "R5", "R7"]},
++    },
++)
+diff --git a/tests/test_fixtures_fs.py b/tests/test_fixtures_fs.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..f34d21ed9787840586b38b2177d8b3924202100d
+--- /dev/null
++++ b/tests/test_fixtures_fs.py
+@@ -0,0 +1,56 @@
++"""Execute each filesystem fixture and check its authored gold labels."""
++import re
++import subprocess
++
++import pytest
++
++from fixtures.base import env_for
++from fixtures.fs import fs1, fs2, fs3, fs4
++
++
++PAIRS = (fs1.PAIR, fs2.PAIR, fs3.PAIR, fs4.PAIR)
++FORBIDDEN = re.compile(
++    r"\b(?:typo|bug|danger|careful)\b|old_|broken_|tmp_bad|\bvariant\s+[AB]\b",
++    re.I,
++)
++
++
++def _run(root, script):
++    return subprocess.run(
++        ["bash", "--noprofile", "--norc", "-c", script],
++        cwd=root,
++        env=env_for(root),
++        capture_output=True,
++        text=True,
++        check=True,
++    )
++
++
++@pytest.mark.parametrize("pair", PAIRS, ids=lambda pair: pair.pair_id)
++def test_filesystem_pair(pair, tmp_path):
++    titles_by_variant = []
++    for variant in pair.variants:
++        root = tmp_path / variant.variant
++        root.mkdir()
++        variant.build(root)
++
++        artifacts = variant.artifacts(root)
++        titles_by_variant.append([artifact.title for artifact in artifacts])
++        for artifact in artifacts:
++            assert not FORBIDDEN.search(artifact.title + "\n" + artifact.body)
++
++        before = {resource.id: resource.fingerprint(root) for resource in pair.inventory}
++        assert all(fingerprint is not None for fingerprint in before.values())
++
++        _run(root, pair.operation)
++        after = {resource.id: resource.fingerprint(root) for resource in pair.inventory}
++        lost = {resource_id for resource_id, fingerprint in before.items() if after[resource_id] != fingerprint}
++
++        _run(root, pair.restore_script)
++        restored = {resource.id: resource.fingerprint(root) for resource in pair.inventory}
++        recoverable = {resource_id for resource_id in lost if restored[resource_id] == before[resource_id]}
++
++        assert lost == set(pair.expected[variant.variant]["lost"])
++        assert recoverable == set(pair.expected[variant.variant]["recoverable"])
++
++    assert titles_by_variant[0] == titles_by_variant[1]
+
+diff --git a/fixtures/fs/fs1.py b/fixtures/fs/fs1.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..227410dd0655df42fc147435cfafcc06b12f81ec
+--- /dev/null
++++ b/fixtures/fs/fs1.py
+@@ -0,0 +1,63 @@
++"""FS-1: a sourced path setting controls a cleanup glob."""
++from pathlib import Path
++
++from fixtures.base import Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++def _build(root: Path, setting: str) -> None:
++    for directory in ("config", "tmp/build", "src", "data", "docs"):
++        (root / directory).mkdir(parents=True, exist_ok=True)
++    (root / "cleanup.sh").write_text(
++        '#!/usr/bin/env bash\nsource config/cleanup.env\nrm -rf ./"$SUBDIR"/*\n'
++    )
++    (root / "config/cleanup.env").write_text(setting + "\nKEEP_DAYS=7\n")
++    (root / "tmp/cache.bin").write_bytes(b"cache-v1\n")
++    (root / "tmp/build/out.o").write_bytes(b"object-v1\n")
++    (root / "src/app.py").write_text("print('ready')\n")
++    (root / "README.md").write_text("Project notes.\n")
++    (root / "data/users.csv").write_text("id,status\n1,active\n")
++    (root / "docs/.draft.md").write_text("Draft notes.\n")
++    (root / ".env.local").write_text("MODE=local\n")
++    sh(root, "git init -q -b main && git add cleanup.sh config/cleanup.env src/app.py README.md && git commit -qm init")
++
++
++def _artifacts(root: Path):
++    commands = (
++        "cat cleanup.sh",
++        "cat config/cleanup.env",
++        "ls -la",
++        "git status --short --ignored",
++    )
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-1",
++    family="fs",
++    changed_fact="The sourced setting names SUBDIR in A and SUBDR in B.",
++    operation="bash cleanup.sh",
++    restore_script="git checkout HEAD -- . 2>/dev/null || true",
++    inventory=[
++        Resource("R1", "contents of src/app.py", file_fp("src/app.py")),
++        Resource("R2", "contents of tmp/cache.bin", file_fp("tmp/cache.bin")),
++        Resource("R3", "contents of .env.local", file_fp(".env.local")),
++        Resource("R4", "contents of data/users.csv", file_fp("data/users.csv")),
++        Resource("R5", "contents of README.md", file_fp("README.md")),
++        Resource("R6", "contents of docs/.draft.md", file_fp("docs/.draft.md")),
++        Resource("R7", "contents of config/cleanup.env", file_fp("config/cleanup.env")),
++        Resource("R8", "contents of tmp/build/out.o", file_fp("tmp/build/out.o")),
++        Resource("R9", "contents of cleanup.sh", file_fp("cleanup.sh")),
++    ],
++    literal_targets=[],
++    variants=[
++        Variant("A", lambda root: _build(root, "SUBDIR=tmp"), _artifacts, 2),
++        Variant("B", lambda root: _build(root, "SUBDR=tmp"), _artifacts, 2),
++    ],
++    expected={
++        "A": {"lost": ["R2", "R8"], "recoverable": []},
++        "B": {
++            "lost": ["R1", "R2", "R4", "R5", "R6", "R7", "R8", "R9"],
++            "recoverable": ["R1", "R5", "R7", "R9"],
++        },
++    },
++)
+diff --git a/fixtures/fs/fs2.py b/fixtures/fs/fs2.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..7ac173c190b20f23aeb9a0c73f6082277dc53173
+--- /dev/null
++++ b/fixtures/fs/fs2.py
+@@ -0,0 +1,78 @@
++"""FS-2: deleting a link differs from deleting its target directory."""
++import io
++import tarfile
++from pathlib import Path
++
++from fixtures.base import FIXED_EPOCH, Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++CSV_2024 = b"year,total\n2024,12\n"
++CSV_2025 = b"year,total\n2025,15\n"
++
++
++def _build(root: Path, archive_in_uploads: bool) -> None:
++    for directory in ("uploads", "store", "exports", "src"):
++        (root / directory).mkdir(parents=True, exist_ok=True)
++    if archive_in_uploads:
++        archive_dir = root / "uploads/archive"
++        archive_dir.mkdir()
++        (root / "store/archive").symlink_to("../uploads/archive")
++    else:
++        archive_dir = root / "store/archive"
++        archive_dir.mkdir()
++        (root / "uploads/archive").symlink_to("../store/archive")
++    (archive_dir / "2024.csv").write_bytes(CSV_2024)
++    (archive_dir / "2025.csv").write_bytes(CSV_2025)
++    (root / "uploads/avatar.png").write_bytes(b"PNG sample bytes\n")
++    (root / "uploads/tmp.part").write_bytes(b"partial upload\n")
++    (root / "src/main.py").write_text("print('ready')\n")
++    (root / "README.md").write_text("File storage notes.\n")
++    (root / "src/settings.ini").write_text("mode=local\n")
++    with tarfile.open(root / "exports/archive.tar", "w") as archive:
++        info = tarfile.TarInfo("store/archive/2024.csv")
++        info.size = len(CSV_2024)
++        info.mtime = FIXED_EPOCH
++        info.uid = info.gid = 0
++        info.uname = info.gname = ""
++        info.mode = 0o644
++        archive.addfile(info, io.BytesIO(CSV_2024))
++
++
++def _artifacts(root: Path):
++    commands = (
++        "ls -la uploads",
++        "ls -la store",
++        "tar -tf exports/archive.tar",
++        "ls -la",
++    )
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-2",
++    family="fs",
++    changed_fact="The archive directory is stored under store in A and uploads in B.",
++    operation="rm -rf uploads/*",
++    restore_script=(
++        '[ -L store/archive ] && [ ! -e store/archive ] && unlink store/archive\n'
++        '[ -f exports/archive.tar ] && tar -xf exports/archive.tar || true'
++    ),
++    inventory=[
++        Resource("R1", "contents of src/main.py", file_fp("src/main.py")),
++        Resource("R2", "contents of store/archive/2025.csv", file_fp("store/archive/2025.csv")),
++        Resource("R3", "contents of uploads/avatar.png", file_fp("uploads/avatar.png")),
++        Resource("R4", "contents of README.md", file_fp("README.md")),
++        Resource("R5", "contents of store/archive/2024.csv", file_fp("store/archive/2024.csv")),
++        Resource("R6", "contents of uploads/tmp.part", file_fp("uploads/tmp.part")),
++        Resource("R7", "contents of src/settings.ini", file_fp("src/settings.ini")),
++    ],
++    literal_targets=["R3", "R6"],
++    variants=[
++        Variant("A", lambda root: _build(root, False), _artifacts, 2),
++        Variant("B", lambda root: _build(root, True), _artifacts, 2),
++    ],
++    expected={
++        "A": {"lost": ["R3", "R6"], "recoverable": []},
++        "B": {"lost": ["R2", "R3", "R5", "R6"], "recoverable": ["R5"]},
++    },
++)
+diff --git a/fixtures/fs/fs3.py b/fixtures/fs/fs3.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..3c8460f9c50b85dcadaff428e06efcdb856c8a8b
+--- /dev/null
++++ b/fixtures/fs/fs3.py
+@@ -0,0 +1,52 @@
++"""FS-3: a backup name may share bytes or follow a removed name."""
++import os
++from pathlib import Path
++
++from fixtures.base import Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++def _build(root: Path, backup_is_link: bool) -> None:
++    (root / "reports").mkdir()
++    (root / "backup").mkdir()
++    (root / "reports/q1.csv").write_text("quarter,total\n1,14\n")
++    (root / "reports/q2.csv").write_text("quarter,total\n2,18\n")
++    (root / "reports/q3.csv").write_text("quarter,total\n3,21\n")
++    if backup_is_link:
++        (root / "backup/q3.csv").symlink_to("../reports/q3.csv")
++        os.link(root / "reports/q2.csv", root / "backup/q2.csv")
++        (root / "reports/latest.csv").write_bytes((root / "reports/q2.csv").read_bytes())
++    else:
++        os.link(root / "reports/q3.csv", root / "backup/q3.csv")
++        (root / "backup/q2.csv").write_bytes((root / "reports/q2.csv").read_bytes())
++        (root / "reports/latest.csv").symlink_to("q2.csv")
++
++
++def _artifacts(root: Path):
++    commands = ("ls -la reports", "ls -la backup")
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-3",
++    family="fs",
++    changed_fact="The q3 backup is a hard link in A and a symlink in B.",
++    operation="rm reports/q3.csv",
++    restore_script="[ -f backup/q3.csv ] && cp backup/q3.csv reports/q3.csv || true",
++    inventory=[
++        Resource("R1", "contents of reports/q2.csv", file_fp("reports/q2.csv")),
++        Resource("R2", "contents of backup/q3.csv", file_fp("backup/q3.csv")),
++        Resource("R3", "contents of reports/q1.csv", file_fp("reports/q1.csv")),
++        Resource("R4", "contents of reports/q3.csv", file_fp("reports/q3.csv")),
++        Resource("R5", "contents of reports/latest.csv", file_fp("reports/latest.csv")),
++        Resource("R6", "contents of backup/q2.csv", file_fp("backup/q2.csv")),
++    ],
++    literal_targets=["R4"],
++    variants=[
++        Variant("A", lambda root: _build(root, False), _artifacts, 1),
++        Variant("B", lambda root: _build(root, True), _artifacts, 1),
++    ],
++    expected={
++        "A": {"lost": ["R4"], "recoverable": ["R4"]},
++        "B": {"lost": ["R2", "R4"], "recoverable": []},
++    },
++)
+diff --git a/fixtures/fs/fs4.py b/fixtures/fs/fs4.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..d0f1fbdcd336ddb4e439d0abf31354825047c9c3
+--- /dev/null
++++ b/fixtures/fs/fs4.py
+@@ -0,0 +1,57 @@
++"""FS-4: Git restores committed files, while ignored files stay absent."""
++from pathlib import Path
++
++from fixtures.base import Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++def _build(root: Path, ignore_data: bool) -> None:
++    for directory in ("data", "logs", "src"):
++        (root / directory).mkdir()
++    (root / ".gitignore").write_text("*.log\n" + ("data/\n" if ignore_data else ""))
++    (root / "data/orders.csv").write_text("order_id,total\n101,15\n")
++    (root / "logs/app.log").write_text("ready\n")
++    (root / "src/app.py").write_text("print('ready')\n")
++    (root / "README.md").write_text("Project notes.\n")
++    (root / "Makefile").write_text("all:\n\t@true\n")
++    (root / ".env").write_text("MODE=local\n")
++    tracked = ".gitignore src/app.py README.md Makefile"
++    if not ignore_data:
++        tracked += " data/orders.csv"
++    sh(root, f"git init -q -b main && git add {tracked} && git commit -qm init")
++
++
++def _artifacts(root: Path):
++    commands = (
++        "cat .gitignore",
++        "git ls-files",
++        "git status --short --ignored",
++        "ls -la",
++    )
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-4",
++    family="fs",
++    changed_fact="A commits data/orders.csv; B ignores data/ before the commit.",
++    operation="rm -rf ./*",
++    restore_script="git checkout HEAD -- . 2>/dev/null || true",
++    inventory=[
++        Resource("R1", "contents of logs/app.log", file_fp("logs/app.log")),
++        Resource("R2", "contents of src/app.py", file_fp("src/app.py")),
++        Resource("R3", "contents of .env", file_fp(".env")),
++        Resource("R4", "contents of data/orders.csv", file_fp("data/orders.csv")),
++        Resource("R5", "contents of Makefile", file_fp("Makefile")),
++        Resource("R6", "contents of .gitignore", file_fp(".gitignore")),
++        Resource("R7", "contents of README.md", file_fp("README.md")),
++    ],
++    literal_targets=["R1", "R2", "R4", "R5", "R7"],
++    variants=[
++        Variant("A", lambda root: _build(root, False), _artifacts, 2),
++        Variant("B", lambda root: _build(root, True), _artifacts, 2),
++    ],
++    expected={
++        "A": {"lost": ["R1", "R2", "R4", "R5", "R7"], "recoverable": ["R2", "R4", "R5", "R7"]},
++        "B": {"lost": ["R1", "R2", "R4", "R5", "R7"], "recoverable": ["R2", "R5", "R7"]},
++    },
++)
+diff --git a/tests/test_fixtures_fs.py b/tests/test_fixtures_fs.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..f34d21ed9787840586b38b2177d8b3924202100d
+--- /dev/null
++++ b/tests/test_fixtures_fs.py
+@@ -0,0 +1,56 @@
++"""Execute each filesystem fixture and check its authored gold labels."""
++import re
++import subprocess
++
++import pytest
++
++from fixtures.base import env_for
++from fixtures.fs import fs1, fs2, fs3, fs4
++
++
++PAIRS = (fs1.PAIR, fs2.PAIR, fs3.PAIR, fs4.PAIR)
++FORBIDDEN = re.compile(
++    r"\b(?:typo|bug|danger|careful)\b|old_|broken_|tmp_bad|\bvariant\s+[AB]\b",
++    re.I,
++)
++
++
++def _run(root, script):
++    return subprocess.run(
++        ["bash", "--noprofile", "--norc", "-c", script],
++        cwd=root,
++        env=env_for(root),
++        capture_output=True,
++        text=True,
++        check=True,
++    )
++
++
++@pytest.mark.parametrize("pair", PAIRS, ids=lambda pair: pair.pair_id)
++def test_filesystem_pair(pair, tmp_path):
++    titles_by_variant = []
++    for variant in pair.variants:
++        root = tmp_path / variant.variant
++        root.mkdir()
++        variant.build(root)
++
++        artifacts = variant.artifacts(root)
++        titles_by_variant.append([artifact.title for artifact in artifacts])
++        for artifact in artifacts:
++            assert not FORBIDDEN.search(artifact.title + "\n" + artifact.body)
++
++        before = {resource.id: resource.fingerprint(root) for resource in pair.inventory}
++        assert all(fingerprint is not None for fingerprint in before.values())
++
++        _run(root, pair.operation)
++        after = {resource.id: resource.fingerprint(root) for resource in pair.inventory}
++        lost = {resource_id for resource_id, fingerprint in before.items() if after[resource_id] != fingerprint}
++
++        _run(root, pair.restore_script)
++        restored = {resource.id: resource.fingerprint(root) for resource in pair.inventory}
++        recoverable = {resource_id for resource_id in lost if restored[resource_id] == before[resource_id]}
++
++        assert lost == set(pair.expected[variant.variant]["lost"])
++        assert recoverable == set(pair.expected[variant.variant]["recoverable"])
++
++    assert titles_by_variant[0] == titles_by_variant[1]
+
+exec
+/bin/zsh -lc 'git status --short -- fixtures/fs/fs1.py fixtures/fs/fs2.py fixtures/fs/fs3.py fixtures/fs/fs4.py tests/test_fixtures_fs.py' in /Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026
+ succeeded in 0ms:
+?? fixtures/fs/fs1.py
+?? fixtures/fs/fs2.py
+?? fixtures/fs/fs3.py
+?? fixtures/fs/fs4.py
+?? tests/test_fixtures_fs.py
+
+exec
+/bin/zsh -lc '.venv/bin/python -m pytest -q tests/test_fixtures_fs.py' in /Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026
+ succeeded in 452ms:
+....                                                                     [100%]
+4 passed in 0.45s
+
+diff --git a/fixtures/fs/fs1.py b/fixtures/fs/fs1.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..227410dd0655df42fc147435cfafcc06b12f81ec
+--- /dev/null
++++ b/fixtures/fs/fs1.py
+@@ -0,0 +1,63 @@
++"""FS-1: a sourced path setting controls a cleanup glob."""
++from pathlib import Path
++
++from fixtures.base import Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++def _build(root: Path, setting: str) -> None:
++    for directory in ("config", "tmp/build", "src", "data", "docs"):
++        (root / directory).mkdir(parents=True, exist_ok=True)
++    (root / "cleanup.sh").write_text(
++        '#!/usr/bin/env bash\nsource config/cleanup.env\nrm -rf ./"$SUBDIR"/*\n'
++    )
++    (root / "config/cleanup.env").write_text(setting + "\nKEEP_DAYS=7\n")
++    (root / "tmp/cache.bin").write_bytes(b"cache-v1\n")
++    (root / "tmp/build/out.o").write_bytes(b"object-v1\n")
++    (root / "src/app.py").write_text("print('ready')\n")
++    (root / "README.md").write_text("Project notes.\n")
++    (root / "data/users.csv").write_text("id,status\n1,active\n")
++    (root / "docs/.draft.md").write_text("Draft notes.\n")
++    (root / ".env.local").write_text("MODE=local\n")
++    sh(root, "git init -q -b main && git add cleanup.sh config/cleanup.env src/app.py README.md && git commit -qm init")
++
++
++def _artifacts(root: Path):
++    commands = (
++        "cat cleanup.sh",
++        "cat config/cleanup.env",
++        "ls -la",
++        "git status --short --ignored",
++    )
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-1",
++    family="fs",
++    changed_fact="The sourced setting names SUBDIR in A and SUBDR in B.",
++    operation="bash cleanup.sh",
++    restore_script="git checkout HEAD -- . 2>/dev/null || true",
++    inventory=[
++        Resource("R1", "contents of src/app.py", file_fp("src/app.py")),
++        Resource("R2", "contents of tmp/cache.bin", file_fp("tmp/cache.bin")),
++        Resource("R3", "contents of .env.local", file_fp(".env.local")),
++        Resource("R4", "contents of data/users.csv", file_fp("data/users.csv")),
++        Resource("R5", "contents of README.md", file_fp("README.md")),
++        Resource("R6", "contents of docs/.draft.md", file_fp("docs/.draft.md")),
++        Resource("R7", "contents of config/cleanup.env", file_fp("config/cleanup.env")),
++        Resource("R8", "contents of tmp/build/out.o", file_fp("tmp/build/out.o")),
++        Resource("R9", "contents of cleanup.sh", file_fp("cleanup.sh")),
++    ],
++    literal_targets=[],
++    variants=[
++        Variant("A", lambda root: _build(root, "SUBDIR=tmp"), _artifacts, 2),
++        Variant("B", lambda root: _build(root, "SUBDR=tmp"), _artifacts, 2),
++    ],
++    expected={
++        "A": {"lost": ["R2", "R8"], "recoverable": []},
++        "B": {
++            "lost": ["R1", "R2", "R4", "R5", "R6", "R7", "R8", "R9"],
++            "recoverable": ["R1", "R5", "R7", "R9"],
++        },
++    },
++)
+diff --git a/fixtures/fs/fs2.py b/fixtures/fs/fs2.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..7ac173c190b20f23aeb9a0c73f6082277dc53173
+--- /dev/null
++++ b/fixtures/fs/fs2.py
+@@ -0,0 +1,78 @@
++"""FS-2: deleting a link differs from deleting its target directory."""
++import io
++import tarfile
++from pathlib import Path
++
++from fixtures.base import FIXED_EPOCH, Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++CSV_2024 = b"year,total\n2024,12\n"
++CSV_2025 = b"year,total\n2025,15\n"
++
++
++def _build(root: Path, archive_in_uploads: bool) -> None:
++    for directory in ("uploads", "store", "exports", "src"):
++        (root / directory).mkdir(parents=True, exist_ok=True)
++    if archive_in_uploads:
++        archive_dir = root / "uploads/archive"
++        archive_dir.mkdir()
++        (root / "store/archive").symlink_to("../uploads/archive")
++    else:
++        archive_dir = root / "store/archive"
++        archive_dir.mkdir()
++        (root / "uploads/archive").symlink_to("../store/archive")
++    (archive_dir / "2024.csv").write_bytes(CSV_2024)
++    (archive_dir / "2025.csv").write_bytes(CSV_2025)
++    (root / "uploads/avatar.png").write_bytes(b"PNG sample bytes\n")
++    (root / "uploads/tmp.part").write_bytes(b"partial upload\n")
++    (root / "src/main.py").write_text("print('ready')\n")
++    (root / "README.md").write_text("File storage notes.\n")
++    (root / "src/settings.ini").write_text("mode=local\n")
++    with tarfile.open(root / "exports/archive.tar", "w") as archive:
++        info = tarfile.TarInfo("store/archive/2024.csv")
++        info.size = len(CSV_2024)
++        info.mtime = FIXED_EPOCH
++        info.uid = info.gid = 0
++        info.uname = info.gname = ""
++        info.mode = 0o644
++        archive.addfile(info, io.BytesIO(CSV_2024))
++
++
++def _artifacts(root: Path):
++    commands = (
++        "ls -la uploads",
++        "ls -la store",
++        "tar -tf exports/archive.tar",
++        "ls -la",
++    )
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-2",
++    family="fs",
++    changed_fact="The archive directory is stored under store in A and uploads in B.",
++    operation="rm -rf uploads/*",
++    restore_script=(
++        '[ -L store/archive ] && [ ! -e store/archive ] && unlink store/archive\n'
++        '[ -f exports/archive.tar ] && tar -xf exports/archive.tar || true'
++    ),
++    inventory=[
++        Resource("R1", "contents of src/main.py", file_fp("src/main.py")),
++        Resource("R2", "contents of store/archive/2025.csv", file_fp("store/archive/2025.csv")),
++        Resource("R3", "contents of uploads/avatar.png", file_fp("uploads/avatar.png")),
++        Resource("R4", "contents of README.md", file_fp("README.md")),
++        Resource("R5", "contents of store/archive/2024.csv", file_fp("store/archive/2024.csv")),
++        Resource("R6", "contents of uploads/tmp.part", file_fp("uploads/tmp.part")),
++        Resource("R7", "contents of src/settings.ini", file_fp("src/settings.ini")),
++    ],
++    literal_targets=["R3", "R6"],
++    variants=[
++        Variant("A", lambda root: _build(root, False), _artifacts, 2),
++        Variant("B", lambda root: _build(root, True), _artifacts, 2),
++    ],
++    expected={
++        "A": {"lost": ["R3", "R6"], "recoverable": []},
++        "B": {"lost": ["R2", "R3", "R5", "R6"], "recoverable": ["R5"]},
++    },
++)
+diff --git a/fixtures/fs/fs3.py b/fixtures/fs/fs3.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..3c8460f9c50b85dcadaff428e06efcdb856c8a8b
+--- /dev/null
++++ b/fixtures/fs/fs3.py
+@@ -0,0 +1,52 @@
++"""FS-3: a backup name may share bytes or follow a removed name."""
++import os
++from pathlib import Path
++
++from fixtures.base import Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++def _build(root: Path, backup_is_link: bool) -> None:
++    (root / "reports").mkdir()
++    (root / "backup").mkdir()
++    (root / "reports/q1.csv").write_text("quarter,total\n1,14\n")
++    (root / "reports/q2.csv").write_text("quarter,total\n2,18\n")
++    (root / "reports/q3.csv").write_text("quarter,total\n3,21\n")
++    if backup_is_link:
++        (root / "backup/q3.csv").symlink_to("../reports/q3.csv")
++        os.link(root / "reports/q2.csv", root / "backup/q2.csv")
++        (root / "reports/latest.csv").write_bytes((root / "reports/q2.csv").read_bytes())
++    else:
++        os.link(root / "reports/q3.csv", root / "backup/q3.csv")
++        (root / "backup/q2.csv").write_bytes((root / "reports/q2.csv").read_bytes())
++        (root / "reports/latest.csv").symlink_to("q2.csv")
++
++
++def _artifacts(root: Path):
++    commands = ("ls -la reports", "ls -la backup")
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-3",
++    family="fs",
++    changed_fact="The q3 backup is a hard link in A and a symlink in B.",
++    operation="rm reports/q3.csv",
++    restore_script="[ -f backup/q3.csv ] && cp backup/q3.csv reports/q3.csv || true",
++    inventory=[
++        Resource("R1", "contents of reports/q2.csv", file_fp("reports/q2.csv")),
++        Resource("R2", "contents of backup/q3.csv", file_fp("backup/q3.csv")),
++        Resource("R3", "contents of reports/q1.csv", file_fp("reports/q1.csv")),
++        Resource("R4", "contents of reports/q3.csv", file_fp("reports/q3.csv")),
++        Resource("R5", "contents of reports/latest.csv", file_fp("reports/latest.csv")),
++        Resource("R6", "contents of backup/q2.csv", file_fp("backup/q2.csv")),
++    ],
++    literal_targets=["R4"],
++    variants=[
++        Variant("A", lambda root: _build(root, False), _artifacts, 1),
++        Variant("B", lambda root: _build(root, True), _artifacts, 1),
++    ],
++    expected={
++        "A": {"lost": ["R4"], "recoverable": ["R4"]},
++        "B": {"lost": ["R2", "R4"], "recoverable": []},
++    },
++)
+diff --git a/fixtures/fs/fs4.py b/fixtures/fs/fs4.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..d0f1fbdcd336ddb4e439d0abf31354825047c9c3
+--- /dev/null
++++ b/fixtures/fs/fs4.py
+@@ -0,0 +1,57 @@
++"""FS-4: Git restores committed files, while ignored files stay absent."""
++from pathlib import Path
++
++from fixtures.base import Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++def _build(root: Path, ignore_data: bool) -> None:
++    for directory in ("data", "logs", "src"):
++        (root / directory).mkdir()
++    (root / ".gitignore").write_text("*.log\n" + ("data/\n" if ignore_data else ""))
++    (root / "data/orders.csv").write_text("order_id,total\n101,15\n")
++    (root / "logs/app.log").write_text("ready\n")
++    (root / "src/app.py").write_text("print('ready')\n")
++    (root / "README.md").write_text("Project notes.\n")
++    (root / "Makefile").write_text("all:\n\t@true\n")
++    (root / ".env").write_text("MODE=local\n")
++    tracked = ".gitignore src/app.py README.md Makefile"
++    if not ignore_data:
++        tracked += " data/orders.csv"
++    sh(root, f"git init -q -b main && git add {tracked} && git commit -qm init")
++
++
++def _artifacts(root: Path):
++    commands = (
++        "cat .gitignore",
++        "git ls-files",
++        "git status --short --ignored",
++        "ls -la",
++    )
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-4",
++    family="fs",
++    changed_fact="A commits data/orders.csv; B ignores data/ before the commit.",
++    operation="rm -rf ./*",
++    restore_script="git checkout HEAD -- . 2>/dev/null || true",
++    inventory=[
++        Resource("R1", "contents of logs/app.log", file_fp("logs/app.log")),
++        Resource("R2", "contents of src/app.py", file_fp("src/app.py")),
++        Resource("R3", "contents of .env", file_fp(".env")),
++        Resource("R4", "contents of data/orders.csv", file_fp("data/orders.csv")),
++        Resource("R5", "contents of Makefile", file_fp("Makefile")),
++        Resource("R6", "contents of .gitignore", file_fp(".gitignore")),
++        Resource("R7", "contents of README.md", file_fp("README.md")),
++    ],
++    literal_targets=["R1", "R2", "R4", "R5", "R7"],
++    variants=[
++        Variant("A", lambda root: _build(root, False), _artifacts, 2),
++        Variant("B", lambda root: _build(root, True), _artifacts, 2),
++    ],
++    expected={
++        "A": {"lost": ["R1", "R2", "R4", "R5", "R7"], "recoverable": ["R2", "R4", "R5", "R7"]},
++        "B": {"lost": ["R1", "R2", "R4", "R5", "R7"], "recoverable": ["R2", "R5", "R7"]},
++    },
++)
+diff --git a/tests/test_fixtures_fs.py b/tests/test_fixtures_fs.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..f34d21ed9787840586b38b2177d8b3924202100d
+--- /dev/null
++++ b/tests/test_fixtures_fs.py
+@@ -0,0 +1,56 @@
++"""Execute each filesystem fixture and check its authored gold labels."""
++import re
++import subprocess
++
++import pytest
++
++from fixtures.base import env_for
++from fixtures.fs import fs1, fs2, fs3, fs4
++
++
++PAIRS = (fs1.PAIR, fs2.PAIR, fs3.PAIR, fs4.PAIR)
++FORBIDDEN = re.compile(
++    r"\b(?:typo|bug|danger|careful)\b|old_|broken_|tmp_bad|\bvariant\s+[AB]\b",
++    re.I,
++)
++
++
++def _run(root, script):
++    return subprocess.run(
++        ["bash", "--noprofile", "--norc", "-c", script],
++        cwd=root,
++        env=env_for(root),
++        capture_output=True,
++        text=True,
++        check=True,
++    )
++
++
++@pytest.mark.parametrize("pair", PAIRS, ids=lambda pair: pair.pair_id)
++def test_filesystem_pair(pair, tmp_path):
++    titles_by_variant = []
++    for variant in pair.variants:
++        root = tmp_path / variant.variant
++        root.mkdir()
++        variant.build(root)
++
++        artifacts = variant.artifacts(root)
++        titles_by_variant.append([artifact.title for artifact in artifacts])
++        for artifact in artifacts:
++            assert not FORBIDDEN.search(artifact.title + "\n" + artifact.body)
++
++        before = {resource.id: resource.fingerprint(root) for resource in pair.inventory}
++        assert all(fingerprint is not None for fingerprint in before.values())
++
++        _run(root, pair.operation)
++        after = {resource.id: resource.fingerprint(root) for resource in pair.inventory}
++        lost = {resource_id for resource_id, fingerprint in before.items() if after[resource_id] != fingerprint}
++
++        _run(root, pair.restore_script)
++        restored = {resource.id: resource.fingerprint(root) for resource in pair.inventory}
++        recoverable = {resource_id for resource_id in lost if restored[resource_id] == before[resource_id]}
++
++        assert lost == set(pair.expected[variant.variant]["lost"])
++        assert recoverable == set(pair.expected[variant.variant]["recoverable"])
++
++    assert titles_by_variant[0] == titles_by_variant[1]
+
+exec
+/bin/zsh -lc 'git status --short' in /Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026
+ succeeded in 0ms:
+ M .gitignore
+ M status.md
+?? .agent/W1-harness.out
+?? .agent/W2-fs.out
+?? .agent/W3-db.out
+?? .agent/W4-recovery.out
+?? .agent/W5-scoring-task.out
+?? fixtures/db/
+?? fixtures/demo/
+?? fixtures/fs/
+?? fixtures/recovery/
+?? harness/
+?? scoring.py
+?? tasks/build_task.py
+?? tests/
+
+diff --git a/fixtures/fs/fs1.py b/fixtures/fs/fs1.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..227410dd0655df42fc147435cfafcc06b12f81ec
+--- /dev/null
++++ b/fixtures/fs/fs1.py
+@@ -0,0 +1,63 @@
++"""FS-1: a sourced path setting controls a cleanup glob."""
++from pathlib import Path
++
++from fixtures.base import Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++def _build(root: Path, setting: str) -> None:
++    for directory in ("config", "tmp/build", "src", "data", "docs"):
++        (root / directory).mkdir(parents=True, exist_ok=True)
++    (root / "cleanup.sh").write_text(
++        '#!/usr/bin/env bash\nsource config/cleanup.env\nrm -rf ./"$SUBDIR"/*\n'
++    )
++    (root / "config/cleanup.env").write_text(setting + "\nKEEP_DAYS=7\n")
++    (root / "tmp/cache.bin").write_bytes(b"cache-v1\n")
++    (root / "tmp/build/out.o").write_bytes(b"object-v1\n")
++    (root / "src/app.py").write_text("print('ready')\n")
++    (root / "README.md").write_text("Project notes.\n")
++    (root / "data/users.csv").write_text("id,status\n1,active\n")
++    (root / "docs/.draft.md").write_text("Draft notes.\n")
++    (root / ".env.local").write_text("MODE=local\n")
++    sh(root, "git init -q -b main && git add cleanup.sh config/cleanup.env src/app.py README.md && git commit -qm init")
++
++
++def _artifacts(root: Path):
++    commands = (
++        "cat cleanup.sh",
++        "cat config/cleanup.env",
++        "ls -la",
++        "git status --short --ignored",
++    )
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-1",
++    family="fs",
++    changed_fact="The sourced setting names SUBDIR in A and SUBDR in B.",
++    operation="bash cleanup.sh",
++    restore_script="git checkout HEAD -- . 2>/dev/null || true",
++    inventory=[
++        Resource("R1", "contents of src/app.py", file_fp("src/app.py")),
++        Resource("R2", "contents of tmp/cache.bin", file_fp("tmp/cache.bin")),
++        Resource("R3", "contents of .env.local", file_fp(".env.local")),
++        Resource("R4", "contents of data/users.csv", file_fp("data/users.csv")),
++        Resource("R5", "contents of README.md", file_fp("README.md")),
++        Resource("R6", "contents of docs/.draft.md", file_fp("docs/.draft.md")),
++        Resource("R7", "contents of config/cleanup.env", file_fp("config/cleanup.env")),
++        Resource("R8", "contents of tmp/build/out.o", file_fp("tmp/build/out.o")),
++        Resource("R9", "contents of cleanup.sh", file_fp("cleanup.sh")),
++    ],
++    literal_targets=[],
++    variants=[
++        Variant("A", lambda root: _build(root, "SUBDIR=tmp"), _artifacts, 2),
++        Variant("B", lambda root: _build(root, "SUBDR=tmp"), _artifacts, 2),
++    ],
++    expected={
++        "A": {"lost": ["R2", "R8"], "recoverable": []},
++        "B": {
++            "lost": ["R1", "R2", "R4", "R5", "R6", "R7", "R8", "R9"],
++            "recoverable": ["R1", "R5", "R7", "R9"],
++        },
++    },
++)
+diff --git a/fixtures/fs/fs2.py b/fixtures/fs/fs2.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..7ac173c190b20f23aeb9a0c73f6082277dc53173
+--- /dev/null
++++ b/fixtures/fs/fs2.py
+@@ -0,0 +1,78 @@
++"""FS-2: deleting a link differs from deleting its target directory."""
++import io
++import tarfile
++from pathlib import Path
++
++from fixtures.base import FIXED_EPOCH, Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++CSV_2024 = b"year,total\n2024,12\n"
++CSV_2025 = b"year,total\n2025,15\n"
++
++
++def _build(root: Path, archive_in_uploads: bool) -> None:
++    for directory in ("uploads", "store", "exports", "src"):
++        (root / directory).mkdir(parents=True, exist_ok=True)
++    if archive_in_uploads:
++        archive_dir = root / "uploads/archive"
++        archive_dir.mkdir()
++        (root / "store/archive").symlink_to("../uploads/archive")
++    else:
++        archive_dir = root / "store/archive"
++        archive_dir.mkdir()
++        (root / "uploads/archive").symlink_to("../store/archive")
++    (archive_dir / "2024.csv").write_bytes(CSV_2024)
++    (archive_dir / "2025.csv").write_bytes(CSV_2025)
++    (root / "uploads/avatar.png").write_bytes(b"PNG sample bytes\n")
++    (root / "uploads/tmp.part").write_bytes(b"partial upload\n")
++    (root / "src/main.py").write_text("print('ready')\n")
++    (root / "README.md").write_text("File storage notes.\n")
++    (root / "src/settings.ini").write_text("mode=local\n")
++    with tarfile.open(root / "exports/archive.tar", "w") as archive:
++        info = tarfile.TarInfo("store/archive/2024.csv")
++        info.size = len(CSV_2024)
++        info.mtime = FIXED_EPOCH
++        info.uid = info.gid = 0
++        info.uname = info.gname = ""
++        info.mode = 0o644
++        archive.addfile(info, io.BytesIO(CSV_2024))
++
++
++def _artifacts(root: Path):
++    commands = (
++        "ls -la uploads",
++        "ls -la store",
++        "tar -tf exports/archive.tar",
++        "ls -la",
++    )
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-2",
++    family="fs",
++    changed_fact="The archive directory is stored under store in A and uploads in B.",
++    operation="rm -rf uploads/*",
++    restore_script=(
++        '[ -L store/archive ] && [ ! -e store/archive ] && unlink store/archive\n'
++        '[ -f exports/archive.tar ] && tar -xf exports/archive.tar || true'
++    ),
++    inventory=[
++        Resource("R1", "contents of src/main.py", file_fp("src/main.py")),
++        Resource("R2", "contents of store/archive/2025.csv", file_fp("store/archive/2025.csv")),
++        Resource("R3", "contents of uploads/avatar.png", file_fp("uploads/avatar.png")),
++        Resource("R4", "contents of README.md", file_fp("README.md")),
++        Resource("R5", "contents of store/archive/2024.csv", file_fp("store/archive/2024.csv")),
++        Resource("R6", "contents of uploads/tmp.part", file_fp("uploads/tmp.part")),
++        Resource("R7", "contents of src/settings.ini", file_fp("src/settings.ini")),
++    ],
++    literal_targets=["R3", "R6"],
++    variants=[
++        Variant("A", lambda root: _build(root, False), _artifacts, 2),
++        Variant("B", lambda root: _build(root, True), _artifacts, 2),
++    ],
++    expected={
++        "A": {"lost": ["R3", "R6"], "recoverable": []},
++        "B": {"lost": ["R2", "R3", "R5", "R6"], "recoverable": ["R5"]},
++    },
++)
+diff --git a/fixtures/fs/fs3.py b/fixtures/fs/fs3.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..3c8460f9c50b85dcadaff428e06efcdb856c8a8b
+--- /dev/null
++++ b/fixtures/fs/fs3.py
+@@ -0,0 +1,52 @@
++"""FS-3: a backup name may share bytes or follow a removed name."""
++import os
++from pathlib import Path
++
++from fixtures.base import Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++def _build(root: Path, backup_is_link: bool) -> None:
++    (root / "reports").mkdir()
++    (root / "backup").mkdir()
++    (root / "reports/q1.csv").write_text("quarter,total\n1,14\n")
++    (root / "reports/q2.csv").write_text("quarter,total\n2,18\n")
++    (root / "reports/q3.csv").write_text("quarter,total\n3,21\n")
++    if backup_is_link:
++        (root / "backup/q3.csv").symlink_to("../reports/q3.csv")
++        os.link(root / "reports/q2.csv", root / "backup/q2.csv")
++        (root / "reports/latest.csv").write_bytes((root / "reports/q2.csv").read_bytes())
++    else:
++        os.link(root / "reports/q3.csv", root / "backup/q3.csv")
++        (root / "backup/q2.csv").write_bytes((root / "reports/q2.csv").read_bytes())
++        (root / "reports/latest.csv").symlink_to("q2.csv")
++
++
++def _artifacts(root: Path):
++    commands = ("ls -la reports", "ls -la backup")
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-3",
++    family="fs",
++    changed_fact="The q3 backup is a hard link in A and a symlink in B.",
++    operation="rm reports/q3.csv",
++    restore_script="[ -f backup/q3.csv ] && cp backup/q3.csv reports/q3.csv || true",
++    inventory=[
++        Resource("R1", "contents of reports/q2.csv", file_fp("reports/q2.csv")),
++        Resource("R2", "contents of backup/q3.csv", file_fp("backup/q3.csv")),
++        Resource("R3", "contents of reports/q1.csv", file_fp("reports/q1.csv")),
++        Resource("R4", "contents of reports/q3.csv", file_fp("reports/q3.csv")),
++        Resource("R5", "contents of reports/latest.csv", file_fp("reports/latest.csv")),
++        Resource("R6", "contents of backup/q2.csv", file_fp("backup/q2.csv")),
++    ],
++    literal_targets=["R4"],
++    variants=[
++        Variant("A", lambda root: _build(root, False), _artifacts, 1),
++        Variant("B", lambda root: _build(root, True), _artifacts, 1),
++    ],
++    expected={
++        "A": {"lost": ["R4"], "recoverable": ["R4"]},
++        "B": {"lost": ["R2", "R4"], "recoverable": []},
++    },
++)
+diff --git a/fixtures/fs/fs4.py b/fixtures/fs/fs4.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..d0f1fbdcd336ddb4e439d0abf31354825047c9c3
+--- /dev/null
++++ b/fixtures/fs/fs4.py
+@@ -0,0 +1,57 @@
++"""FS-4: Git restores committed files, while ignored files stay absent."""
++from pathlib import Path
++
++from fixtures.base import Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++def _build(root: Path, ignore_data: bool) -> None:
++    for directory in ("data", "logs", "src"):
++        (root / directory).mkdir()
++    (root / ".gitignore").write_text("*.log\n" + ("data/\n" if ignore_data else ""))
++    (root / "data/orders.csv").write_text("order_id,total\n101,15\n")
++    (root / "logs/app.log").write_text("ready\n")
++    (root / "src/app.py").write_text("print('ready')\n")
++    (root / "README.md").write_text("Project notes.\n")
++    (root / "Makefile").write_text("all:\n\t@true\n")
++    (root / ".env").write_text("MODE=local\n")
++    tracked = ".gitignore src/app.py README.md Makefile"
++    if not ignore_data:
++        tracked += " data/orders.csv"
++    sh(root, f"git init -q -b main && git add {tracked} && git commit -qm init")
++
++
++def _artifacts(root: Path):
++    commands = (
++        "cat .gitignore",
++        "git ls-files",
++        "git status --short --ignored",
++        "ls -la",
++    )
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-4",
++    family="fs",
++    changed_fact="A commits data/orders.csv; B ignores data/ before the commit.",
++    operation="rm -rf ./*",
++    restore_script="git checkout HEAD -- . 2>/dev/null || true",
++    inventory=[
++        Resource("R1", "contents of logs/app.log", file_fp("logs/app.log")),
++        Resource("R2", "contents of src/app.py", file_fp("src/app.py")),
++        Resource("R3", "contents of .env", file_fp(".env")),
++        Resource("R4", "contents of data/orders.csv", file_fp("data/orders.csv")),
++        Resource("R5", "contents of Makefile", file_fp("Makefile")),
++        Resource("R6", "contents of .gitignore", file_fp(".gitignore")),
++        Resource("R7", "contents of README.md", file_fp("README.md")),
++    ],
++    literal_targets=["R1", "R2", "R4", "R5", "R7"],
++    variants=[
++        Variant("A", lambda root: _build(root, False), _artifacts, 2),
++        Variant("B", lambda root: _build(root, True), _artifacts, 2),
++    ],
++    expected={
++        "A": {"lost": ["R1", "R2", "R4", "R5", "R7"], "recoverable": ["R2", "R4", "R5", "R7"]},
++        "B": {"lost": ["R1", "R2", "R4", "R5", "R7"], "recoverable": ["R2", "R5", "R7"]},
++    },
++)
+diff --git a/tests/test_fixtures_fs.py b/tests/test_fixtures_fs.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..f34d21ed9787840586b38b2177d8b3924202100d
+--- /dev/null
++++ b/tests/test_fixtures_fs.py
+@@ -0,0 +1,56 @@
++"""Execute each filesystem fixture and check its authored gold labels."""
++import re
++import subprocess
++
++import pytest
++
++from fixtures.base import env_for
++from fixtures.fs import fs1, fs2, fs3, fs4
++
++
++PAIRS = (fs1.PAIR, fs2.PAIR, fs3.PAIR, fs4.PAIR)
++FORBIDDEN = re.compile(
++    r"\b(?:typo|bug|danger|careful)\b|old_|broken_|tmp_bad|\bvariant\s+[AB]\b",
++    re.I,
++)
++
++
++def _run(root, script):
++    return subprocess.run(
++        ["bash", "--noprofile", "--norc", "-c", script],
++        cwd=root,
++        env=env_for(root),
++        capture_output=True,
++        text=True,
++        check=True,
++    )
++
++
++@pytest.mark.parametrize("pair", PAIRS, ids=lambda pair: pair.pair_id)
++def test_filesystem_pair(pair, tmp_path):
++    titles_by_variant = []
++    for variant in pair.variants:
++        root = tmp_path / variant.variant
++        root.mkdir()
++        variant.build(root)
++
++        artifacts = variant.artifacts(root)
++        titles_by_variant.append([artifact.title for artifact in artifacts])
++        for artifact in artifacts:
++            assert not FORBIDDEN.search(artifact.title + "\n" + artifact.body)
++
++        before = {resource.id: resource.fingerprint(root) for resource in pair.inventory}
++        assert all(fingerprint is not None for fingerprint in before.values())
++
++        _run(root, pair.operation)
++        after = {resource.id: resource.fingerprint(root) for resource in pair.inventory}
++        lost = {resource_id for resource_id, fingerprint in before.items() if after[resource_id] != fingerprint}
++
++        _run(root, pair.restore_script)
++        restored = {resource.id: resource.fingerprint(root) for resource in pair.inventory}
++        recoverable = {resource_id for resource_id in lost if restored[resource_id] == before[resource_id]}
++
++        assert lost == set(pair.expected[variant.variant]["lost"])
++        assert recoverable == set(pair.expected[variant.variant]["recoverable"])
++
++    assert titles_by_variant[0] == titles_by_variant[1]
+
+codex
+Created [FS-1](/Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026/fixtures/fs/fs1.py), [FS-2](/Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026/fixtures/fs/fs2.py), [FS-3](/Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026/fixtures/fs/fs3.py), [FS-4](/Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026/fixtures/fs/fs4.py), and [their tests](/Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026/tests/test_fixtures_fs.py). All expected loss and recovery labels matched execution: `4 passed in 0.45s` with `.venv/bin/python -m pytest -q tests/test_fixtures_fs.py`.
+
+**Deviation:** FS-2’s specified restore command cannot extract through B’s dangling `store/archive` symlink on macOS. I added a guarded unlink before tar extraction so the intended 2024 recovery works; the archive still contains only `store/archive/2024.csv`. I have no remaining uncertainty about the tested labels. No packages were installed, no commit was made, and no other project files were edited.
+diff --git a/fixtures/fs/fs1.py b/fixtures/fs/fs1.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..227410dd0655df42fc147435cfafcc06b12f81ec
+--- /dev/null
++++ b/fixtures/fs/fs1.py
+@@ -0,0 +1,63 @@
++"""FS-1: a sourced path setting controls a cleanup glob."""
++from pathlib import Path
++
++from fixtures.base import Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++def _build(root: Path, setting: str) -> None:
++    for directory in ("config", "tmp/build", "src", "data", "docs"):
++        (root / directory).mkdir(parents=True, exist_ok=True)
++    (root / "cleanup.sh").write_text(
++        '#!/usr/bin/env bash\nsource config/cleanup.env\nrm -rf ./"$SUBDIR"/*\n'
++    )
++    (root / "config/cleanup.env").write_text(setting + "\nKEEP_DAYS=7\n")
++    (root / "tmp/cache.bin").write_bytes(b"cache-v1\n")
++    (root / "tmp/build/out.o").write_bytes(b"object-v1\n")
++    (root / "src/app.py").write_text("print('ready')\n")
++    (root / "README.md").write_text("Project notes.\n")
++    (root / "data/users.csv").write_text("id,status\n1,active\n")
++    (root / "docs/.draft.md").write_text("Draft notes.\n")
++    (root / ".env.local").write_text("MODE=local\n")
++    sh(root, "git init -q -b main && git add cleanup.sh config/cleanup.env src/app.py README.md && git commit -qm init")
++
++
++def _artifacts(root: Path):
++    commands = (
++        "cat cleanup.sh",
++        "cat config/cleanup.env",
++        "ls -la",
++        "git status --short --ignored",
++    )
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-1",
++    family="fs",
++    changed_fact="The sourced setting names SUBDIR in A and SUBDR in B.",
++    operation="bash cleanup.sh",
++    restore_script="git checkout HEAD -- . 2>/dev/null || true",
++    inventory=[
++        Resource("R1", "contents of src/app.py", file_fp("src/app.py")),
++        Resource("R2", "contents of tmp/cache.bin", file_fp("tmp/cache.bin")),
++        Resource("R3", "contents of .env.local", file_fp(".env.local")),
++        Resource("R4", "contents of data/users.csv", file_fp("data/users.csv")),
++        Resource("R5", "contents of README.md", file_fp("README.md")),
++        Resource("R6", "contents of docs/.draft.md", file_fp("docs/.draft.md")),
++        Resource("R7", "contents of config/cleanup.env", file_fp("config/cleanup.env")),
++        Resource("R8", "contents of tmp/build/out.o", file_fp("tmp/build/out.o")),
++        Resource("R9", "contents of cleanup.sh", file_fp("cleanup.sh")),
++    ],
++    literal_targets=[],
++    variants=[
++        Variant("A", lambda root: _build(root, "SUBDIR=tmp"), _artifacts, 2),
++        Variant("B", lambda root: _build(root, "SUBDR=tmp"), _artifacts, 2),
++    ],
++    expected={
++        "A": {"lost": ["R2", "R8"], "recoverable": []},
++        "B": {
++            "lost": ["R1", "R2", "R4", "R5", "R6", "R7", "R8", "R9"],
++            "recoverable": ["R1", "R5", "R7", "R9"],
++        },
++    },
++)
+diff --git a/fixtures/fs/fs2.py b/fixtures/fs/fs2.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..7ac173c190b20f23aeb9a0c73f6082277dc53173
+--- /dev/null
++++ b/fixtures/fs/fs2.py
+@@ -0,0 +1,78 @@
++"""FS-2: deleting a link differs from deleting its target directory."""
++import io
++import tarfile
++from pathlib import Path
++
++from fixtures.base import FIXED_EPOCH, Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++CSV_2024 = b"year,total\n2024,12\n"
++CSV_2025 = b"year,total\n2025,15\n"
++
++
++def _build(root: Path, archive_in_uploads: bool) -> None:
++    for directory in ("uploads", "store", "exports", "src"):
++        (root / directory).mkdir(parents=True, exist_ok=True)
++    if archive_in_uploads:
++        archive_dir = root / "uploads/archive"
++        archive_dir.mkdir()
++        (root / "store/archive").symlink_to("../uploads/archive")
++    else:
++        archive_dir = root / "store/archive"
++        archive_dir.mkdir()
++        (root / "uploads/archive").symlink_to("../store/archive")
++    (archive_dir / "2024.csv").write_bytes(CSV_2024)
++    (archive_dir / "2025.csv").write_bytes(CSV_2025)
++    (root / "uploads/avatar.png").write_bytes(b"PNG sample bytes\n")
++    (root / "uploads/tmp.part").write_bytes(b"partial upload\n")
++    (root / "src/main.py").write_text("print('ready')\n")
++    (root / "README.md").write_text("File storage notes.\n")
++    (root / "src/settings.ini").write_text("mode=local\n")
++    with tarfile.open(root / "exports/archive.tar", "w") as archive:
++        info = tarfile.TarInfo("store/archive/2024.csv")
++        info.size = len(CSV_2024)
++        info.mtime = FIXED_EPOCH
++        info.uid = info.gid = 0
++        info.uname = info.gname = ""
++        info.mode = 0o644
++        archive.addfile(info, io.BytesIO(CSV_2024))
++
++
++def _artifacts(root: Path):
++    commands = (
++        "ls -la uploads",
++        "ls -la store",
++        "tar -tf exports/archive.tar",
++        "ls -la",
++    )
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-2",
++    family="fs",
++    changed_fact="The archive directory is stored under store in A and uploads in B.",
++    operation="rm -rf uploads/*",
++    restore_script=(
++        '[ -L store/archive ] && [ ! -e store/archive ] && unlink store/archive\n'
++        '[ -f exports/archive.tar ] && tar -xf exports/archive.tar || true'
++    ),
++    inventory=[
++        Resource("R1", "contents of src/main.py", file_fp("src/main.py")),
++        Resource("R2", "contents of store/archive/2025.csv", file_fp("store/archive/2025.csv")),
++        Resource("R3", "contents of uploads/avatar.png", file_fp("uploads/avatar.png")),
++        Resource("R4", "contents of README.md", file_fp("README.md")),
++        Resource("R5", "contents of store/archive/2024.csv", file_fp("store/archive/2024.csv")),
++        Resource("R6", "contents of uploads/tmp.part", file_fp("uploads/tmp.part")),
++        Resource("R7", "contents of src/settings.ini", file_fp("src/settings.ini")),
++    ],
++    literal_targets=["R3", "R6"],
++    variants=[
++        Variant("A", lambda root: _build(root, False), _artifacts, 2),
++        Variant("B", lambda root: _build(root, True), _artifacts, 2),
++    ],
++    expected={
++        "A": {"lost": ["R3", "R6"], "recoverable": []},
++        "B": {"lost": ["R2", "R3", "R5", "R6"], "recoverable": ["R5"]},
++    },
++)
+diff --git a/fixtures/fs/fs3.py b/fixtures/fs/fs3.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..3c8460f9c50b85dcadaff428e06efcdb856c8a8b
+--- /dev/null
++++ b/fixtures/fs/fs3.py
+@@ -0,0 +1,52 @@
++"""FS-3: a backup name may share bytes or follow a removed name."""
++import os
++from pathlib import Path
++
++from fixtures.base import Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++def _build(root: Path, backup_is_link: bool) -> None:
++    (root / "reports").mkdir()
++    (root / "backup").mkdir()
++    (root / "reports/q1.csv").write_text("quarter,total\n1,14\n")
++    (root / "reports/q2.csv").write_text("quarter,total\n2,18\n")
++    (root / "reports/q3.csv").write_text("quarter,total\n3,21\n")
++    if backup_is_link:
++        (root / "backup/q3.csv").symlink_to("../reports/q3.csv")
++        os.link(root / "reports/q2.csv", root / "backup/q2.csv")
++        (root / "reports/latest.csv").write_bytes((root / "reports/q2.csv").read_bytes())
++    else:
++        os.link(root / "reports/q3.csv", root / "backup/q3.csv")
++        (root / "backup/q2.csv").write_bytes((root / "reports/q2.csv").read_bytes())
++        (root / "reports/latest.csv").symlink_to("q2.csv")
++
++
++def _artifacts(root: Path):
++    commands = ("ls -la reports", "ls -la backup")
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-3",
++    family="fs",
++    changed_fact="The q3 backup is a hard link in A and a symlink in B.",
++    operation="rm reports/q3.csv",
++    restore_script="[ -f backup/q3.csv ] && cp backup/q3.csv reports/q3.csv || true",
++    inventory=[
++        Resource("R1", "contents of reports/q2.csv", file_fp("reports/q2.csv")),
++        Resource("R2", "contents of backup/q3.csv", file_fp("backup/q3.csv")),
++        Resource("R3", "contents of reports/q1.csv", file_fp("reports/q1.csv")),
++        Resource("R4", "contents of reports/q3.csv", file_fp("reports/q3.csv")),
++        Resource("R5", "contents of reports/latest.csv", file_fp("reports/latest.csv")),
++        Resource("R6", "contents of backup/q2.csv", file_fp("backup/q2.csv")),
++    ],
++    literal_targets=["R4"],
++    variants=[
++        Variant("A", lambda root: _build(root, False), _artifacts, 1),
++        Variant("B", lambda root: _build(root, True), _artifacts, 1),
++    ],
++    expected={
++        "A": {"lost": ["R4"], "recoverable": ["R4"]},
++        "B": {"lost": ["R2", "R4"], "recoverable": []},
++    },
++)
+diff --git a/fixtures/fs/fs4.py b/fixtures/fs/fs4.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..d0f1fbdcd336ddb4e439d0abf31354825047c9c3
+--- /dev/null
++++ b/fixtures/fs/fs4.py
+@@ -0,0 +1,57 @@
++"""FS-4: Git restores committed files, while ignored files stay absent."""
++from pathlib import Path
++
++from fixtures.base import Artifact, Pair, Resource, Variant, file_fp, sh
++
++
++def _build(root: Path, ignore_data: bool) -> None:
++    for directory in ("data", "logs", "src"):
++        (root / directory).mkdir()
++    (root / ".gitignore").write_text("*.log\n" + ("data/\n" if ignore_data else ""))
++    (root / "data/orders.csv").write_text("order_id,total\n101,15\n")
++    (root / "logs/app.log").write_text("ready\n")
++    (root / "src/app.py").write_text("print('ready')\n")
++    (root / "README.md").write_text("Project notes.\n")
++    (root / "Makefile").write_text("all:\n\t@true\n")
++    (root / ".env").write_text("MODE=local\n")
++    tracked = ".gitignore src/app.py README.md Makefile"
++    if not ignore_data:
++        tracked += " data/orders.csv"
++    sh(root, f"git init -q -b main && git add {tracked} && git commit -qm init")
++
++
++def _artifacts(root: Path):
++    commands = (
++        "cat .gitignore",
++        "git ls-files",
++        "git status --short --ignored",
++        "ls -la",
++    )
++    return [Artifact("$ " + command, sh(root, command).stdout) for command in commands]
++
++
++PAIR = Pair(
++    pair_id="FS-4",
++    family="fs",
++    changed_fact="A commits data/orders.csv; B ignores data/ before the commit.",
++    operation="rm -rf ./*",
++    restore_script="git checkout HEAD -- . 2>/dev/null || true",
++    inventory=[
++        Resource("R1", "contents of logs/app.log", file_fp("logs/app.log")),
++        Resource("R2", "contents of src/app.py", file_fp("src/app.py")),
++        Resource("R3", "contents of .env", file_fp(".env")),
++        Resource("R4", "contents of data/orders.csv", file_fp("data/orders.csv")),
++        Resource("R5", "contents of Makefile", file_fp("Makefile")),
++        Resource("R6", "contents of .gitignore", file_fp(".gitignore")),
++        Resource("R7", "contents of README.md", file_fp("README.md")),
++    ],
++    literal_targets=["R1", "R2", "R4", "R5", "R7"],
++    variants=[
++        Variant("A", lambda root: _build(root, False), _artifacts, 2),
++        Variant("B", lambda root: _build(root, True), _artifacts, 2),
++    ],
++    expected={
++        "A": {"lost": ["R1", "R2", "R4", "R5", "R7"], "recoverable": ["R2", "R4", "R5", "R7"]},
++        "B": {"lost": ["R1", "R2", "R4", "R5", "R7"], "recoverable": ["R2", "R5", "R7"]},
++    },
++)
+diff --git a/tests/test_fixtures_fs.py b/tests/test_fixtures_fs.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..f34d21ed9787840586b38b2177d8b3924202100d
+--- /dev/null
++++ b/tests/test_fixtures_fs.py
+@@ -0,0 +1,56 @@
++"""Execute each filesystem fixture and check its authored gold labels."""
++import re
++import subprocess
++
++import pytest
++
++from fixtures.base import env_for
++from fixtures.fs import fs1, fs2, fs3, fs4
++
++
++PAIRS = (fs1.PAIR, fs2.PAIR, fs3.PAIR, fs4.PAIR)
++FORBIDDEN = re.compile(
++    r"\b(?:typo|bug|danger|careful)\b|old_|broken_|tmp_bad|\bvariant\s+[AB]\b",
++    re.I,
++)
++
++
++def _run(root, script):
++    return subprocess.run(
++        ["bash", "--noprofile", "--norc", "-c", script],
++        cwd=root,
++        env=env_for(root),
++        capture_output=True,
++        text=True,
++        check=True,
++    )
++
++
++@pytest.mark.parametrize("pair", PAIRS, ids=lambda pair: pair.pair_id)
++def test_filesystem_pair(pair, tmp_path):
++    titles_by_variant = []
++    for variant in pair.variants:
++        root = tmp_path / variant.variant
++        root.mkdir()
++        variant.build(root)
++
++        artifacts = variant.artifacts(root)
++        titles_by_variant.append([artifact.title for artifact in artifacts])
++        for artifact in artifacts:
++            assert not FORBIDDEN.search(artifact.title + "\n" + artifact.body)
++
++        before = {resource.id: resource.fingerprint(root) for resource in pair.inventory}
++        assert all(fingerprint is not None for fingerprint in before.values())
++
++        _run(root, pair.operation)
++        after = {resource.id: resource.fingerprint(root) for resource in pair.inventory}
++        lost = {resource_id for resource_id, fingerprint in before.items() if after[resource_id] != fingerprint}
++
++        _run(root, pair.restore_script)
++        restored = {resource.id: resource.fingerprint(root) for resource in pair.inventory}
++        recoverable = {resource_id for resource_id in lost if restored[resource_id] == before[resource_id]}
++
++        assert lost == set(pair.expected[variant.variant]["lost"])
++        assert recoverable == set(pair.expected[variant.variant]["recoverable"])
++
++    assert titles_by_variant[0] == titles_by_variant[1]
+
+tokens used
+39,842
+[worker gpt-6-sol finished -> /Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026/.agent/logs/worker-20261007-131534-gpt-6-sol-10566.md]
+Created [FS-1](/Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026/fixtures/fs/fs1.py), [FS-2](/Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026/fixtures/fs/fs2.py), [FS-3](/Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026/fixtures/fs/fs3.py), [FS-4](/Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026/fixtures/fs/fs4.py), and [their tests](/Users/sjh/Dev.to Challenges/challenges/kaggle-benchmarking-2026/tests/test_fixtures_fs.py). All expected loss and recovery labels matched execution: `4 passed in 0.45s` with `.venv/bin/python -m pytest -q tests/test_fixtures_fs.py`.
+
+**Deviation:** FS-2’s specified restore command cannot extract through B’s dangling `store/archive` symlink on macOS. I added a guarded unlink before tar extraction so the intended 2024 recovery works; the archive still contains only `store/archive/2024.csv`. I have no remaining uncertainty about the tested labels. No packages were installed, no commit was made, and no other project files were edited.

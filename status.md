@@ -1,16 +1,35 @@
 # Status: Kaggle Benchmarking Challenge (workspace memory)
 
 Read this first when resuming. Update it at every milestone or break.
-Last updated: Fri 9 Oct 2026 ~21:00 Malta.
+Last updated: Fri 9 Oct 2026 ~22:55 Malta. PAUSED for the night (Jawad). Resume Sat 10 Oct.
 DONE tonight (Fri 9 Oct):
 1. FS-8 fix: prompt now shows `stat -c "%n: %F, %h links" data hold data/ledger.csv hold/ledger.csv` (commits 56b31a7, 0011747). Gold unchanged.
 2. Re-audit: red team gpt-6.1-sol + gpt-5.5 panel (.agent/reviews/20261009-200245-*). Red team found FS-8A parent-dir aliasing and unstated write permissions; both fixed. The prompt environment line now says the user owns every file/dir and every directory and every regular file outside .git is writable (harness/render.py); verified on all 30 pairs in Docker by .agent/check_perms.py (0 violations). Blind gpt-5.5 35/36 (.agent/reviews/blind-v2/); DB-5A miss is a model error (correlated subquery `id` binds to outer items.id), gold correct. FS-5 flagged medium-confidence ("contents of" a symlink), left as is.
 3. Held-out v3 and pilot gold byte-identical to before; pilot data/items.jsonl regenerated with the new sentence; 84 tests pass.
 4. FROZEN: data/heldout/ (18 pairs / 36 items) + FREEZE.md with sha256 of items, gold, scoring.py, render.py, build_task.py, tasks/gone_for_good.py. Commit e52e2d6. tasks/gone_for_good.py now embeds the 36 held-out items (16K cap, 600 s).
-NEXT:
-- Push to Kaggle: `kaggle b auth -y; kaggle b t push gone-for-good -f tasks/gone_for_good.py --wait`. Blocked in Claude Code by the permission classifier (counts as creating a public surface). Needs Jawad to approve or run it himself.
-- Smoke-test, then the main run on 6-8 models. Local .env LLMS_AVAILABLE lists 8: claude-sonnet-5, deepseek-r1-0528, gemini-3-flash-preview, gemini-3.1-flash-lite-preview, granite-4.0-h-small, gpt-5.4-nano, gpt-oss-120b (dropped), qwen3-next-80b. Open-weight already covered by DeepSeek R1, Qwen3-Next and Granite. A further open-weight model can come from the 46 on Kaggle (Jawad's choice).
-- Sat: post. Sun: buffer.
+5. Pushed to Kaggle: task gone-for-good v1, PRIVATE, https://www.kaggle.com/benchmarks/tasks/syedjawad11/gone-for-good/1 (approved by Jawad 9 Oct).
+6. Main run (started 18:52 UTC 9 Oct). Excluded gpt-6-sol, gpt-6.1-sol, gpt-5.5, gpt-6-astra (built/audited items). Results in results/kaggle/ (run.json) and results/kaggle/logs/<model>.log; all 36/36 items logged, 0 API errors:
+
+| Model | open-weight | pair | item |
+|---|---|---|---|
+| Gemini 3.7 Flash (task-creation default run) | no | 1.00 | 1.00 |
+| Gemini 3 Flash | no | 0.94 | 0.97 |
+| Claude Sonnet 5 | no | 0.89 | 0.94 |
+| GLM-5 | yes | 0.89 | 0.94 |
+| Gemma 4 31B | yes | 0.83 | 0.89 |
+| DeepSeek R1 | yes | 0.67 | 0.78 |
+| GPT-5.4 | no | 0.22 | 0.44 |
+| Gemini 3.1 Flash-Lite | no | 0.06 | 0.31 |
+| GPT-5.4 nano | no | 0.06 | 0.25 |
+| Qwen3-Next 80B Thinking | yes | still RUNNING on Kaggle at 22:50 Malta | |
+
+Notes: GPT-5.4 took 39 s for 36 items: likely no extended reasoning under default settings; disclose; maybe rerun with reasoning. GPT-5.4 nano: 1 format error.
+
+NEXT (Sat 10 Oct):
+- `kaggle b auth -y`, then `kaggle b t status gone-for-good`; if Qwen done: `kaggle b t download gone-for-good -o results/kaggle` and `kaggle b t log gone-for-good -m qwen3-next-80b-a3b-thinking > results/kaggle/logs/qwen3-next-80b-a3b-thinking.log`. If not done by Sat morning, report it as "did not complete".
+- Analysis: per-family / per-hops tables, failure examples (reasoning vs format vs truncation), plots in results/ and docs/.
+- Decide: rerun GPT-5.4 with reasoning on (would be a new task version; disclose).
+- Post draft Sat (post.md), panel critique, Jawad publishes the task (`kaggle b t publish gone-for-good`) and the post. Sun buffer.
 
 ## HISTORY (superseded by the 9 Oct items above): 8 Oct decisions (Jawad)
 8 Oct decisions (Jawad): DROP gpt-oss-120b (never answers via local proxy; replace with another open-weight model
@@ -32,7 +51,7 @@ blind gpt-5.5), freeze into data/heldout/, push to Kaggle.
 ## Where things are
 - Idea: "Gone for Good?" (BENCHMARK_BRIEF.md). Plan, team, scope: PLAN.md.
 - Codex team scripts: ../../scripts/codex-{worker,review,panel}.sh, models in ../../scripts/models.env.
-- No GitHub repo, no Kaggle task yet.
+- No GitHub repo. Kaggle task pushed (private): see item 5 above.
 
 ## Done (7 Oct)
 - Panel review (gpt-6.1-sol, gpt-5.5, gpt-6-astra [no longer used]) → contract fixes, recorded in PLAN.md.
