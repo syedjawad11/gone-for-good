@@ -30,7 +30,7 @@ The model answers with resource IDs:
 
 ## Results (frozen held-out set: 18 pairs / 36 items, run 9 Oct 2026)
 
-![Pair accuracy by model](results/analysis/leaderboard.png)
+![Pair accuracy by model](results/charts/01_leaderboard.png)
 
 | Model | Open weight | Pair acc (95% CI) | Item acc |
 |---|---|---|---|
@@ -72,7 +72,7 @@ output). Two full runs produce byte-identical gold. The harness never runs model
 | `data/gold.jsonl`, `data/items.jsonl` | Development (pilot) set. |
 | `scoring.py` | Deterministic scorer, baselines and pair-bootstrap CIs. |
 | `tasks/` | `build_task.py` generates the self-contained Kaggle task `gone_for_good.py`. |
-| `analysis/` | Turns Kaggle run logs into the tables and charts in `results/analysis/`. |
+| `analysis/` | `analyze.py` turns Kaggle run logs into the tables in `results/analysis/`; `charts.py` draws the post charts and cover in `results/charts/`. |
 | `results/kaggle/` | Raw Kaggle run outputs and per-model logs (every raw response). |
 | `tests/` | pytest suite (scorer, fixtures, harness, task build, analysis). |
 | `.agent/` | Build record: worker briefs, reviewer and red-team reports. |
@@ -89,6 +89,7 @@ diff .gfgcheck/gold.jsonl data/heldout/gold.jsonl
 
 # re-derive the tables and charts from the Kaggle logs
 .venv/bin/python -m analysis.analyze
+.venv/bin/python -m analysis.charts
 ```
 
 ## How it was built
