@@ -18,7 +18,9 @@ SAT 10 OCT:
   all numbers reproduce; fixes: 'permanent' = not restored by the supplied script; scorer does not check the
   permanent_loss value (all 349 valid replies were consistent, disclosed); GPT-5.4 reasoning not verified;
   Qwen subset caveat; dev-set exposure; causal wording softened. Post v2 committed 9fee15a (~1,800 words).
-- W15 (luna): same-answer metric into analysis/analyze.py, running.
+- W15 (luna) same-answer metric verified + committed. README written; Docker regen of held-out gold byte-identical (10 Oct).
+- PUBLIC REPO (Jawad approved 10 Oct): https://github.com/syedjawad11/gone-for-good (main). Post images use raw.githubusercontent URLs.
+  Any commit after Sun 11 Oct 23:59 PDT must be listed in README 'Commits after the submission deadline'.
 NEXT: Qwen rerun -> add to post; images hosting (repo or DEV upload, Jawad); cover image; Jawad: verify Crane X
 quotes in browser (now only implied, no direct quote), publish Kaggle task, confirm public link, publish post.
 

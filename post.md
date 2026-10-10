@@ -63,7 +63,7 @@ Each item got one scored response with temperature 0 requested, a 16,384-token o
 
 ## Findings
 
-![Pair accuracy by model](TODO-leaderboard.png)
+![Pair accuracy by model](https://raw.githubusercontent.com/syedjawad11/gone-for-good/main/results/analysis/leaderboard.png)
 
 | Model | Open | Pair acc (95% CI) | Item acc | Said "no permanent loss" when there was | Same answer to both variants |
 |---|---|---|---|---|---|
@@ -89,7 +89,7 @@ Each item got one scored response with temperature 0 requested, a 16,384-token o
 
 **3. The dangerous error is concentrated.** Of the 27 answers that claimed no permanent loss when the script left data unrestored, GPT-5.4 nano gave 11, half of all such items. Four models gave none. If you put a model in front of `rm` as a safety check, the error that matters is the one that says "fine", and in this run that error came almost entirely from the bottom four.
 
-![Every model on every item](TODO-items_heatmap.png)
+![Every model on every item](https://raw.githubusercontent.com/syedjawad11/gone-for-good/main/results/analysis/items_heatmap.png)
 
 **4. SQLite pairs were the hardest.** Median pair accuracy across models was 0.92 on recovery pairs (hard links, archives, `git stash`, `cp -n`), 0.75 on filesystem pairs (`find` precedence, globs, the git index) and 0.58 on SQLite pairs. Among the top five models, all six database misses were on two pairs: DB-6 (type affinity) and DB-9 (whether `BEGIN` comes before the `DELETE` or after a failing `INSERT`).
 
@@ -111,7 +111,7 @@ Each item got one scored response with temperature 0 requested, a 16,384-token o
 ## My Benchmark
 
 - **Kaggle benchmark:** https://www.kaggle.com/benchmarks/tasks/syedjawad11/gone-for-good/1 (TODO: confirm public)
-- **Code, fixtures, gold and analysis:** TODO repo link
+- **Code, fixtures, gold and analysis:** https://github.com/syedjawad11/gone-for-good
 
 Pair and item accuracies above are re-scored from the logged responses with the frozen scorer and match Kaggle's. The analysis counts provider failures and false assurance separately.
 
