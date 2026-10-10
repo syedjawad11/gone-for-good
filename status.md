@@ -14,7 +14,13 @@ SAT 10 OCT:
   Pair-bootstrap 95% CIs computed (scoring.py bootstrap). E.g. Sonnet 5 [0.72,1.0], GPT-5.4 [0.06,0.44].
 - W14 analysis worker (brief .agent/tasks/W14-analysis.md): analysis/analyze.py -> results/analysis/ tables+plots.
 - matplotlib 3.11.2 installed in .venv.
-NEXT: verify W14, post draft, panel critique, Jawad publishes task + post.
+- W14 verified + committed (feb36e5). Post draft 1 (55e33a7) -> panel critique (.agent/reviews/20261010-154222-panel-*):
+  all numbers reproduce; fixes: 'permanent' = not restored by the supplied script; scorer does not check the
+  permanent_loss value (all 349 valid replies were consistent, disclosed); GPT-5.4 reasoning not verified;
+  Qwen subset caveat; dev-set exposure; causal wording softened. Post v2 committed 9fee15a (~1,800 words).
+- W15 (luna): same-answer metric into analysis/analyze.py, running.
+NEXT: Qwen rerun -> add to post; images hosting (repo or DEV upload, Jawad); cover image; Jawad: verify Crane X
+quotes in browser (now only implied, no direct quote), publish Kaggle task, confirm public link, publish post.
 
 DONE Fri 9 Oct:
 1. FS-8 fix: prompt now shows `stat -c "%n: %F, %h links" data hold data/ledger.csv hold/ledger.csv` (commits 56b31a7, 0011747). Gold unchanged.
