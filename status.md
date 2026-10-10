@@ -23,8 +23,8 @@ SAT 10 OCT:
   Any commit after Sun 11 Oct 23:59 PDT must be listed in README 'Commits after the submission deadline'.
 - Qwen run 2 (10 Oct, run 4628529): 0.67 pair [0.44,0.89] / 0.75 item, 0 rate limits, 4 empty replies (DB-6B, FS-8A, FS-8B, R-5B).
   Post table uses run 2; run 1 in footnote; both in analysis (models.json stems ...-thinking and ...-thinking-run2). Commit 848b669, pushed.
-NEXT: cover image; Jawad: verify Crane X
-quotes in browser (now only implied, no direct quote), publish Kaggle task, confirm public link, publish post.
+- Kaggle task PUBLISHED 10 Oct (Public: True, URL returns 200, backing notebook published too). Post TODO removed (b5768e3).
+NEXT: cover image; Jawad: verify Crane X quotes in browser (now only implied, no direct quote), publish post, then DEV link into README.
 
 DONE Fri 9 Oct:
 1. FS-8 fix: prompt now shows `stat -c "%n: %F, %h links" data hold data/ledger.csv hold/ledger.csv` (commits 56b31a7, 0011747). Gold unchanged.
