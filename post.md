@@ -110,7 +110,7 @@ Each item got one scored response with temperature 0 requested, a 16,384-token o
 
 ## My Benchmark
 
-- **Kaggle benchmark:** https://www.kaggle.com/benchmarks/tasks/syedjawad11/gone-for-good/1 (TODO: confirm public)
+- **Kaggle benchmark:** https://www.kaggle.com/benchmarks/tasks/syedjawad11/gone-for-good/1
 - **Code, fixtures, gold and analysis:** https://github.com/syedjawad11/gone-for-good
 
 Pair and item accuracies above are re-scored from the logged responses with the frozen scorer and match Kaggle's. The analysis counts provider failures and false assurance separately.
