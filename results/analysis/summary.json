@@ -25,6 +25,8 @@
       "lost_wrong": 0,
       "rec_wrong": 0
     },
+    "same_answer_pairs": 0,
+    "same_answer_of": 18,
     "by_family": {
       "db": {
         "accuracy": 1.0,
@@ -86,6 +88,8 @@
       "lost_wrong": 1,
       "rec_wrong": 1
     },
+    "same_answer_pairs": 0,
+    "same_answer_of": 18,
     "by_family": {
       "db": {
         "accuracy": 1.0,
@@ -147,6 +151,8 @@
       "lost_wrong": 1,
       "rec_wrong": 2
     },
+    "same_answer_pairs": 2,
+    "same_answer_of": 18,
     "by_family": {
       "db": {
         "accuracy": 0.8333333333333334,
@@ -208,6 +214,8 @@
       "lost_wrong": 2,
       "rec_wrong": 2
     },
+    "same_answer_pairs": 2,
+    "same_answer_of": 18,
     "by_family": {
       "db": {
         "accuracy": 0.6666666666666666,
@@ -269,6 +277,8 @@
       "lost_wrong": 4,
       "rec_wrong": 3
     },
+    "same_answer_pairs": 3,
+    "same_answer_of": 18,
     "by_family": {
       "db": {
         "accuracy": 0.6666666666666666,
@@ -330,6 +340,8 @@
       "lost_wrong": 7,
       "rec_wrong": 8
     },
+    "same_answer_pairs": 3,
+    "same_answer_of": 18,
     "by_family": {
       "db": {
         "accuracy": 0.5,
@@ -391,6 +403,8 @@
       "lost_wrong": 3,
       "rec_wrong": 5
     },
+    "same_answer_pairs": 1,
+    "same_answer_of": 12,
     "by_family": {
       "db": {
         "accuracy": 0.16666666666666666,
@@ -431,7 +445,7 @@
     "display": "GPT-5.4",
     "vendor": "OpenAI",
     "open_weight": false,
-    "note": "default settings; 39 s for 36 items suggests no extended reasoning",
+    "note": "Kaggle default reasoning config (not verified); 39 s for 36 items",
     "complete": true,
     "n_items": 36,
     "n_pairs": 18,
@@ -452,6 +466,8 @@
       "lost_wrong": 12,
       "rec_wrong": 19
     },
+    "same_answer_pairs": 9,
+    "same_answer_of": 18,
     "by_family": {
       "db": {
         "accuracy": 0.16666666666666666,
@@ -513,6 +529,8 @@
       "lost_wrong": 14,
       "rec_wrong": 25
     },
+    "same_answer_pairs": 9,
+    "same_answer_of": 18,
     "by_family": {
       "db": {
         "accuracy": 0.0,
@@ -574,6 +592,8 @@
       "lost_wrong": 19,
       "rec_wrong": 24
     },
+    "same_answer_pairs": 6,
+    "same_answer_of": 18,
     "by_family": {
       "db": {
         "accuracy": 0.0,

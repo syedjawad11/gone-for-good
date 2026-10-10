@@ -43,7 +43,9 @@ def test_synthetic_reports(tmp_path):
         row = {"item_id": item["item_id"], "pair_id": item["pair_id"],
                "family": item["family"], "hops": item["hops"],
                "item_correct": True, "format_ok": True, "format_error": "",
-               "raw_response": "{}", "gold_permanent": True, "pred_permanent": True,
+               "raw_response": json.dumps({"lost": ["R1"], "recoverable": [],
+                                           "permanent_loss": True}),
+               "gold_permanent": True, "pred_permanent": True,
                "lost_exact": True, "rec_exact": True, "missed_losses": [],
                "phantom_losses": [], "false_alarm": [], "false_assurance": []}
         row.update(changes)
@@ -51,7 +53,8 @@ def test_synthetic_reports(tmp_path):
 
     strong = [record(gold[0], item_correct=False), record(gold[0])]
     strong += [record(item) for item in gold[1:]]
-    weak = [record(gold[0]), record(gold[1], item_correct=False, pred_permanent=False),
+    weak = [record(gold[0], raw_response='```json\n{"lost":["R1"],"recoverable":[],"permanent_loss":true}\n```'),
+            record(gold[1], item_correct=False, pred_permanent=False),
             record(gold[2], api_error="rate limit", format_ok=False, item_correct=True),
             record(gold[3], item_correct=False, format_ok=False, format_error="no_json")]
     (logs / "strong.log").write_text("irrelevant line\n" + "".join(strong), encoding="utf-8")
@@ -67,6 +70,8 @@ def test_synthetic_reports(tmp_path):
     assert summaries[1]["infra_fails"] == 1
     assert summaries[1]["format_fails"] == 1
     assert summaries[1]["error_tags"]["false_assurance"] == 1
+    assert summaries[1]["same_answer_pairs"] == 1
+    assert summaries[1]["same_answer_of"] == 1
     assert summaries[0]["by_hops"]["3"]["n_pairs"] == 1
     assert "3 (1 pairs)" in (out / "by_hops.md").read_text(encoding="utf-8")
     assert "FS-1A" not in (out / "failures.jsonl").read_text(encoding="utf-8")
@@ -76,6 +81,7 @@ def test_synthetic_reports(tmp_path):
     leaderboard = (out / "leaderboard.md").read_text(encoding="utf-8")
     assert leaderboard.index("Strong") < leaderboard.index("Weak")
     assert "Strong | no | 1.00 | 1.00" in leaderboard
+    assert "Same answer A=B (pairs)" in leaderboard
     for name in ("leaderboard.md", "by_family.md", "by_hops.md", "items_matrix.md",
                  "error_types.md", "failures.jsonl", "summary.json", "leaderboard.png",
                  "by_family.png", "items_heatmap.png"):

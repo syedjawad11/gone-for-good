@@ -3,7 +3,7 @@
   "gemini-3-flash-preview":         {"display": "Gemini 3 Flash",          "vendor": "Google",    "open_weight": false},
   "gemini-3.1-flash-lite-preview":  {"display": "Gemini 3.1 Flash-Lite",   "vendor": "Google",    "open_weight": false},
   "claude-sonnet-5-default":        {"display": "Claude Sonnet 5",         "vendor": "Anthropic", "open_weight": false},
-  "gpt-5.4-2026-03-05":             {"display": "GPT-5.4",                 "vendor": "OpenAI",    "open_weight": false, "note": "default settings; 39 s for 36 items suggests no extended reasoning"},
+  "gpt-5.4-2026-03-05":             {"display": "GPT-5.4",                 "vendor": "OpenAI",    "open_weight": false, "note": "Kaggle default reasoning config (not verified); 39 s for 36 items"},
   "gpt-5.4-nano-2026-03-17":        {"display": "GPT-5.4 nano",            "vendor": "OpenAI",    "open_weight": false},
   "glm-5":                          {"display": "GLM-5",                   "vendor": "Zhipu",     "open_weight": true},
   "gemma-4-31b-it":                 {"display": "Gemma 4 31B",             "vendor": "Google",    "open_weight": true},

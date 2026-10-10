@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import re
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -20,6 +21,7 @@ COLORS = {
 FAMILIES = ("db", "fs", "recovery")
 HOPS = (2, 3, 4)
 TAGS = ("false_assurance", "false_alarm_perm", "lost_wrong", "rec_wrong")
+ANSWER_OBJECT = re.compile(r'\{[^{}]*"lost"[^{}]*\}')
 
 
 def read_jsonl(path):
@@ -73,6 +75,28 @@ def ratio(numerator, denominator):
     return numerator / denominator if denominator else None
 
 
+def parsed_answer(item):
+    """Return the canonical answer in a logged response, or None if unavailable."""
+    if "api_error" in item or item.get("raw_response") == "":
+        return None
+    matches = ANSWER_OBJECT.findall(item.get("raw_response", ""))
+    if not matches:
+        return None
+    try:
+        answer = json.loads(matches[-1])
+        lost = answer["lost"]
+        recoverable = answer["recoverable"]
+        permanent_loss = answer["permanent_loss"]
+        if (not isinstance(lost, list) or not all(isinstance(value, str) for value in lost) or
+                not isinstance(recoverable, list) or
+                not all(isinstance(value, str) for value in recoverable) or
+                not isinstance(permanent_loss, bool)):
+            return None
+        return (tuple(sorted(lost)), tuple(sorted(recoverable)), permanent_loss)
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
 def format_acc(value):
     return "—" if value is None else "{:.2f}".format(value)
 
@@ -109,6 +133,15 @@ def compute_model(stem, items, gold, pairs, metadata):
     clean_pairs = {pair_id for pair_id, members in pairs.items()
                    if all(classes.get(m["item_id"]) != "infra" for m in members)}
     tags = Counter(tag for item in items.values() for tag in error_tags(item))
+    same_answer_pairs = 0
+    parsed_answer_pairs = 0
+    for members in pairs.values():
+        variants = {member["item_id"][-1]: items.get(member["item_id"]) for member in members}
+        answer_a = parsed_answer(variants.get("A")) if variants.get("A") is not None else None
+        answer_b = parsed_answer(variants.get("B")) if variants.get("B") is not None else None
+        if answer_a is not None and answer_b is not None:
+            parsed_answer_pairs += 1
+            same_answer_pairs += answer_a == answer_b
     family = {}
     hops = {}
     for name, output in (("family", family), ("hops", hops)):
@@ -132,6 +165,7 @@ def compute_model(stem, items, gold, pairs, metadata):
         "infra_fails": counts["infra"], "format_fails": counts["format"],
         "reasoning_errors": counts["wrong"], "correct_items": counts["correct"],
         "correct_pairs": len(correct_pairs), "error_tags": {tag: tags[tag] for tag in TAGS},
+        "same_answer_pairs": same_answer_pairs, "same_answer_of": parsed_answer_pairs,
         "by_family": family, "by_hops": hops,
     }
 
@@ -144,11 +178,13 @@ def write_reports(out_dir, summaries, runs, gold, pairs):
                                  format_acc(s["item_accuracy"]), s["infra_fails"],
                                  s["format_fails"], s["reasoning_errors"],
                                  s["error_tags"]["false_assurance"],
+                                 "{}/{}".format(s["same_answer_pairs"], s["same_answer_of"]),
                                  "{} ({} pairs)".format(format_acc(s["clean_pair_accuracy"]), s["clean_pair_n"]),
                                  s["note"]))
     (out_dir / "leaderboard.md").write_text(md_table(
         ("Model", "Open weight (yes/no/?)", "Pair acc", "Item acc", "Infra fails",
          "Format fails", "Reasoning errors", "False assurance (items)",
+         "Same answer A=B (pairs)",
          "Clean pair acc (n pairs)", "Note"), leaderboard_rows), encoding="utf-8")
 
     for filename, key, values in (("by_family.md", "by_family", FAMILIES),

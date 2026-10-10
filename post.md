@@ -75,7 +75,7 @@ Each item got one scored response with temperature 0 requested, a 16,384-token o
 | DeepSeek R1 | yes | 0.67 [0.44, 0.89] | 0.78 | 2 | 3/18 |
 | GPT-5.4 † | no | 0.22 [0.06, 0.44] | 0.44 | 5 | 9/18 |
 | Gemini 3.1 Flash-Lite | no | 0.06 [0.00, 0.17] | 0.31 | 6 | 9/18 |
-| GPT-5.4 nano | no | 0.06 [0.00, 0.17] | 0.25 | 11 | 6/17 |
+| GPT-5.4 nano | no | 0.06 [0.00, 0.17] | 0.25 | 11 | 6/18 |
 | *Qwen3-Next 80B Thinking ‡* | yes | *0.44 [0.22, 0.67]* | *0.58* | *2* | *1/12* |
 | *Baselines: all lost / nothing lost / naive reader* | | 0.00 | 0.00 / 0.17 / 0.19 | | |
 
