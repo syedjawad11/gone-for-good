@@ -377,12 +377,75 @@
       }
     }
   },
-  "qwen3-next-80b-a3b-thinking": {
-    "model": "qwen3-next-80b-a3b-thinking",
-    "display": "Qwen3-Next 80B Thinking",
+  "qwen3-next-80b-a3b-thinking-run2": {
+    "model": "qwen3-next-80b-a3b-thinking-run2",
+    "display": "Qwen3-Next 80B Thinking (run 2)",
     "vendor": "Alibaba",
     "open_weight": true,
-    "note": "",
+    "note": "run 2, 10 Oct, same frozen task v1",
+    "complete": true,
+    "n_items": 36,
+    "n_pairs": 18,
+    "pair_accuracy": 0.6666666666666666,
+    "item_accuracy": 0.75,
+    "clean_pair_accuracy": 0.8,
+    "clean_pair_n": 15,
+    "clean_item_accuracy": 0.84375,
+    "clean_item_n": 32,
+    "infra_fails": 4,
+    "format_fails": 0,
+    "reasoning_errors": 5,
+    "correct_items": 27,
+    "correct_pairs": 12,
+    "error_tags": {
+      "false_assurance": 0,
+      "false_alarm_perm": 2,
+      "lost_wrong": 5,
+      "rec_wrong": 5
+    },
+    "same_answer_pairs": 2,
+    "same_answer_of": 15,
+    "by_family": {
+      "db": {
+        "accuracy": 0.5,
+        "n_pairs": 6,
+        "correct_pairs": 3
+      },
+      "fs": {
+        "accuracy": 0.6666666666666666,
+        "n_pairs": 6,
+        "correct_pairs": 4
+      },
+      "recovery": {
+        "accuracy": 0.8333333333333334,
+        "n_pairs": 6,
+        "correct_pairs": 5
+      }
+    },
+    "by_hops": {
+      "2": {
+        "accuracy": 1.0,
+        "n_pairs": 5,
+        "correct_pairs": 5
+      },
+      "3": {
+        "accuracy": 0.45454545454545453,
+        "n_pairs": 11,
+        "correct_pairs": 5
+      },
+      "4": {
+        "accuracy": 1.0,
+        "n_pairs": 2,
+        "correct_pairs": 2
+      }
+    }
+  },
+  "qwen3-next-80b-a3b-thinking": {
+    "model": "qwen3-next-80b-a3b-thinking",
+    "display": "Qwen3-Next 80B Thinking (run 1)",
+    "vendor": "Alibaba",
+    "open_weight": true,
+    "note": "run 1, 9 Oct: 6 rate-limit errors + 4 empty replies",
     "complete": true,
     "n_items": 36,
     "n_pairs": 18,

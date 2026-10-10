@@ -6,7 +6,8 @@
 | GLM-5 | 1.00 | 0.82 | 1.00 |
 | Gemma 4 31B | 1.00 | 0.73 | 1.00 |
 | DeepSeek R1 | 1.00 | 0.45 | 1.00 |
-| Qwen3-Next 80B Thinking | 0.60 | 0.45 | 0.00 |
+| Qwen3-Next 80B Thinking (run 2) | 1.00 | 0.45 | 1.00 |
+| Qwen3-Next 80B Thinking (run 1) | 0.60 | 0.45 | 0.00 |
 | GPT-5.4 | 0.20 | 0.18 | 0.50 |
 | Gemini 3.1 Flash-Lite | 0.00 | 0.09 | 0.00 |
 | GPT-5.4 nano | 0.00 | 0.09 | 0.00 |

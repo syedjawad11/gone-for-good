@@ -40,13 +40,13 @@ The model answers with resource IDs:
 | GLM-5 | yes | 0.89 [0.72, 1.00] | 0.94 |
 | Gemma 4 31B | yes | 0.83 [0.67, 1.00] | 0.89 |
 | DeepSeek R1 | yes | 0.67 [0.44, 0.89] | 0.78 |
+| Qwen3-Next 80B Thinking (run 2, 10 Oct; 4 empty replies counted wrong) | yes | 0.67 [0.44, 0.89] | 0.75 |
 | GPT-5.4 (Kaggle default reasoning config) | no | 0.22 [0.06, 0.44] | 0.44 |
 | Gemini 3.1 Flash-Lite | no | 0.06 [0.00, 0.17] | 0.31 |
 | GPT-5.4 nano | no | 0.06 [0.00, 0.17] | 0.25 |
-| Qwen3-Next 80B Thinking (run 1: 10/36 provider failures, counted wrong) | yes | 0.44 [0.22, 0.67] | 0.58 |
 | Baselines: everything lost / nothing lost / naive reader | | 0.00 | 0.00 / 0.17 / 0.19 |
 
-The confidence intervals come from resampling the 18 pairs. The full tables are in [results/analysis/](results/analysis/):
+Qwen run 1 (9 Oct: 6 rate-limit errors and 4 empty replies) scored 0.44 / 0.58; both runs are in `results/kaggle/`. The confidence intervals come from resampling the 18 pairs. The full tables are in [results/analysis/](results/analysis/):
 by family, by hops, error types, and a model × item matrix. Caveats and disclosures are in the DEV post.
 
 ## How the gold labels are made

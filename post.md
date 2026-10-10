@@ -19,7 +19,7 @@ A few lines higher, the same prompt shows that both paths resolve to **the same 
 
 I gave this case to ten models on Kaggle. Four of them (DeepSeek R1, GPT-5.4, Gemini 3.1 Flash-Lite and GPT-5.4 nano) said nothing would be permanently lost.
 
-Across the whole benchmark, models ranged from **18/18 matched pairs correct to 1/18**. In 27 valid answers, a model claimed everything was recoverable, or nothing was lost, when the restore script left data unrestored.
+Across the whole benchmark, models ranged from **18/18 matched pairs correct to 1/18**. In 25 valid answers, a model claimed everything was recoverable, or nothing was lost, when the restore script left data unrestored.
 
 ## What I Benchmarked
 
@@ -73,21 +73,21 @@ Each item got one scored response with temperature 0 requested, a 16,384-token o
 | GLM-5 | yes | 0.89 [0.72, 1.00] | 0.94 | 0 | 2/18 |
 | Gemma 4 31B | yes | 0.83 [0.67, 1.00] | 0.89 | 0 | 3/18 |
 | DeepSeek R1 | yes | 0.67 [0.44, 0.89] | 0.78 | 2 | 3/18 |
+| Qwen3-Next 80B Thinking ‡ | yes | 0.67 [0.44, 0.89] | 0.75 | 0 | 2/15 |
 | GPT-5.4 † | no | 0.22 [0.06, 0.44] | 0.44 | 5 | 9/18 |
 | Gemini 3.1 Flash-Lite | no | 0.06 [0.00, 0.17] | 0.31 | 6 | 9/18 |
 | GPT-5.4 nano | no | 0.06 [0.00, 0.17] | 0.25 | 11 | 6/18 |
-| *Qwen3-Next 80B Thinking ‡* | yes | *0.44 [0.22, 0.67]* | *0.58* | *2* | *1/12* |
 | *Baselines: all lost / nothing lost / naive reader* | | 0.00 | 0.00 / 0.17 / 0.19 | | |
 
 **How to read this.** CIs come from resampling the 18 pairs. They describe variation across these fixtures, not run-to-run noise, and the [1.00, 1.00] for a perfect score doesn't mean certainty on unseen cases. "Said no permanent loss" counts valid answers among the 22 items where the script leaves something unrestored.
 **† GPT-5.4** ran with Kaggle's default reasoning configuration and finished all 36 items in about 39 s. I didn't verify its reasoning effort, so read this row as that configuration, not as GPT-5.4's best.
-**‡ Qwen run 1** had 10 provider failures (6 rate limits, 4 empty replies), and they are counted as wrong. Excluding them gives 8/12 complete pairs and 21/26 items, but that subset is missing most of the database family. TODO: rerun result.
+**‡ Qwen** is shown from its second run (10 Oct, same frozen task), and its 4 empty replies are counted as wrong. The first run (9 Oct) lost 10 of 36 items to the provider (6 rate limits, 4 empty replies) and scored 0.44 pair / 0.58 item. Both runs are in the repo. FS-8 came back empty in both runs.
 
 **1. The spread is large, and open versus closed weights doesn't explain it.** The top five, two of them open-weight, score 0.83–1.00. Gemma 4 31B scores 61 percentage points higher than the default GPT-5.4 run.
 
 **2. The weakest runs often answered as if the deciding fact weren't there.** GPT-5.4 and Flash-Lite returned identical answers to both variants in 9 of 18 pairs, even though the variants differ in exactly the fact that decides the outcome. The top two models did this zero times.
 
-**3. The dangerous error is concentrated.** Of the 27 answers that claimed no permanent loss when the script left data unrestored, GPT-5.4 nano gave 11, half of all such items. Four models gave none. If you put a model in front of `rm` as a safety check, the error that matters is the one that says "fine", and in this run that error came almost entirely from the bottom four.
+**3. The dangerous error is concentrated.** Of the 25 answers that claimed no permanent loss when the script left data unrestored, GPT-5.4 nano gave 11, half of all such items. Gemini 3.7 Flash, Gemini 3 Flash, GLM-5 and Gemma 4 gave none. If you put a model in front of `rm` as a safety check, the error that matters is the one that says "fine", and here the bottom three models gave 22 of the 25.
 
 ![Every model on every item](https://raw.githubusercontent.com/syedjawad11/gone-for-good/main/results/analysis/items_heatmap.png)
 
