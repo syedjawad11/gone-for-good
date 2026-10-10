@@ -84,8 +84,8 @@ python3 -m venv .venv && .venv/bin/pip install pytest pandas matplotlib kaggle-b
 .venv/bin/python -m pytest -q                      # tests
 
 # regenerate gold for the held-out pairs in Docker and compare with the frozen files
-harness/run_in_docker.sh --only FS-5,FS-6,FS-7,FS-8,FS-9,FS-10,DB-5,DB-6,DB-7,DB-8,DB-9,DB-10,R-5,R-6,R-7,R-8,R-9,R-10 --out /tmp/gfg
-diff /tmp/gfg/gold.jsonl data/heldout/gold.jsonl
+harness/run_in_docker.sh --only FS-5,FS-6,FS-7,FS-8,FS-9,FS-10,DB-5,DB-6,DB-7,DB-8,DB-9,DB-10,R-5,R-6,R-7,R-8,R-9,R-10 --out .gfgcheck
+diff .gfgcheck/gold.jsonl data/heldout/gold.jsonl
 
 # re-derive the tables and charts from the Kaggle logs
 .venv/bin/python -m analysis.analyze
