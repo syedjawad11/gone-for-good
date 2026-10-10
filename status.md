@@ -21,7 +21,9 @@ SAT 10 OCT:
 - W15 (luna) same-answer metric verified + committed. README written; Docker regen of held-out gold byte-identical (10 Oct).
 - PUBLIC REPO (Jawad approved 10 Oct): https://github.com/syedjawad11/gone-for-good (main). Post images use raw.githubusercontent URLs.
   Any commit after Sun 11 Oct 23:59 PDT must be listed in README 'Commits after the submission deadline'.
-NEXT: Qwen rerun -> add to post; images hosting (repo or DEV upload, Jawad); cover image; Jawad: verify Crane X
+- Qwen run 2 (10 Oct, run 4628529): 0.67 pair [0.44,0.89] / 0.75 item, 0 rate limits, 4 empty replies (DB-6B, FS-8A, FS-8B, R-5B).
+  Post table uses run 2; run 1 in footnote; both in analysis (models.json stems ...-thinking and ...-thinking-run2). Commit 848b669, pushed.
+NEXT: cover image; Jawad: verify Crane X
 quotes in browser (now only implied, no direct quote), publish Kaggle task, confirm public link, publish post.
 
 DONE Fri 9 Oct:
