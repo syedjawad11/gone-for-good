@@ -1,8 +1,22 @@
 # Status: Kaggle Benchmarking Challenge (workspace memory)
 
 Read this first when resuming. Update it at every milestone or break.
-Last updated: Fri 9 Oct 2026 ~22:55 Malta. PAUSED for the night (Jawad). Resume Sat 10 Oct.
-DONE tonight (Fri 9 Oct):
+Last updated: Sat 10 Oct 2026 morning Malta. ACTIVE.
+
+SAT 10 OCT:
+- Qwen3-Next 80B Thinking run 1 completed (commit 215f790): raw 0.44 pair / 0.58 item, but 10/36 items infra
+  failures (6x 429 rate limit, 4x empty message). Clean subset 0.67 pair (12 pairs) / 0.81 item (26).
+- Decisions (Jawad, 10 Oct): RERUN Qwen once on frozen v1 (no code change; started Sat morning, status Running);
+  report both runs, disclose. GPT-5.4: NO v2; report with caveat "Kaggle default settings, 39 s for 36 items
+  suggests no extended reasoning".
+- Frozen scorer re-run on logged raw responses reproduces Kaggle numbers exactly; baselines on held-out:
+  everything_lost / nothing_lost / naive_reader all 0.00 pair acc (item 0.00 / 0.17 / 0.19).
+  Pair-bootstrap 95% CIs computed (scoring.py bootstrap). E.g. Sonnet 5 [0.72,1.0], GPT-5.4 [0.06,0.44].
+- W14 analysis worker (brief .agent/tasks/W14-analysis.md): analysis/analyze.py -> results/analysis/ tables+plots.
+- matplotlib 3.11.2 installed in .venv.
+NEXT: verify W14, post draft, panel critique, Jawad publishes task + post.
+
+DONE Fri 9 Oct:
 1. FS-8 fix: prompt now shows `stat -c "%n: %F, %h links" data hold data/ledger.csv hold/ledger.csv` (commits 56b31a7, 0011747). Gold unchanged.
 2. Re-audit: red team gpt-6.1-sol + gpt-5.5 panel (.agent/reviews/20261009-200245-*). Red team found FS-8A parent-dir aliasing and unstated write permissions; both fixed. The prompt environment line now says the user owns every file/dir and every directory and every regular file outside .git is writable (harness/render.py); verified on all 30 pairs in Docker by .agent/check_perms.py (0 violations). Blind gpt-5.5 35/36 (.agent/reviews/blind-v2/); DB-5A miss is a model error (correlated subquery `id` binds to outer items.id), gold correct. FS-5 flagged medium-confidence ("contents of" a symlink), left as is.
 3. Held-out v3 and pilot gold byte-identical to before; pilot data/items.jsonl regenerated with the new sentence; 84 tests pass.

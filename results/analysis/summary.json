@@ -1,0 +1,612 @@
+{
+  "gemini-3.7-flash": {
+    "model": "gemini-3.7-flash",
+    "display": "Gemini 3.7 Flash",
+    "vendor": "Google",
+    "open_weight": false,
+    "note": "",
+    "complete": true,
+    "n_items": 36,
+    "n_pairs": 18,
+    "pair_accuracy": 1.0,
+    "item_accuracy": 1.0,
+    "clean_pair_accuracy": 1.0,
+    "clean_pair_n": 18,
+    "clean_item_accuracy": 1.0,
+    "clean_item_n": 36,
+    "infra_fails": 0,
+    "format_fails": 0,
+    "reasoning_errors": 0,
+    "correct_items": 36,
+    "correct_pairs": 18,
+    "error_tags": {
+      "false_assurance": 0,
+      "false_alarm_perm": 0,
+      "lost_wrong": 0,
+      "rec_wrong": 0
+    },
+    "by_family": {
+      "db": {
+        "accuracy": 1.0,
+        "n_pairs": 6,
+        "correct_pairs": 6
+      },
+      "fs": {
+        "accuracy": 1.0,
+        "n_pairs": 6,
+        "correct_pairs": 6
+      },
+      "recovery": {
+        "accuracy": 1.0,
+        "n_pairs": 6,
+        "correct_pairs": 6
+      }
+    },
+    "by_hops": {
+      "2": {
+        "accuracy": 1.0,
+        "n_pairs": 5,
+        "correct_pairs": 5
+      },
+      "3": {
+        "accuracy": 1.0,
+        "n_pairs": 11,
+        "correct_pairs": 11
+      },
+      "4": {
+        "accuracy": 1.0,
+        "n_pairs": 2,
+        "correct_pairs": 2
+      }
+    }
+  },
+  "gemini-3-flash-preview": {
+    "model": "gemini-3-flash-preview",
+    "display": "Gemini 3 Flash",
+    "vendor": "Google",
+    "open_weight": false,
+    "note": "",
+    "complete": true,
+    "n_items": 36,
+    "n_pairs": 18,
+    "pair_accuracy": 0.9444444444444444,
+    "item_accuracy": 0.9722222222222222,
+    "clean_pair_accuracy": 0.9444444444444444,
+    "clean_pair_n": 18,
+    "clean_item_accuracy": 0.9722222222222222,
+    "clean_item_n": 36,
+    "infra_fails": 0,
+    "format_fails": 0,
+    "reasoning_errors": 1,
+    "correct_items": 35,
+    "correct_pairs": 17,
+    "error_tags": {
+      "false_assurance": 0,
+      "false_alarm_perm": 0,
+      "lost_wrong": 1,
+      "rec_wrong": 1
+    },
+    "by_family": {
+      "db": {
+        "accuracy": 1.0,
+        "n_pairs": 6,
+        "correct_pairs": 6
+      },
+      "fs": {
+        "accuracy": 0.8333333333333334,
+        "n_pairs": 6,
+        "correct_pairs": 5
+      },
+      "recovery": {
+        "accuracy": 1.0,
+        "n_pairs": 6,
+        "correct_pairs": 6
+      }
+    },
+    "by_hops": {
+      "2": {
+        "accuracy": 1.0,
+        "n_pairs": 5,
+        "correct_pairs": 5
+      },
+      "3": {
+        "accuracy": 0.9090909090909091,
+        "n_pairs": 11,
+        "correct_pairs": 10
+      },
+      "4": {
+        "accuracy": 1.0,
+        "n_pairs": 2,
+        "correct_pairs": 2
+      }
+    }
+  },
+  "claude-sonnet-5-default": {
+    "model": "claude-sonnet-5-default",
+    "display": "Claude Sonnet 5",
+    "vendor": "Anthropic",
+    "open_weight": false,
+    "note": "",
+    "complete": true,
+    "n_items": 36,
+    "n_pairs": 18,
+    "pair_accuracy": 0.8888888888888888,
+    "item_accuracy": 0.9444444444444444,
+    "clean_pair_accuracy": 0.8888888888888888,
+    "clean_pair_n": 18,
+    "clean_item_accuracy": 0.9444444444444444,
+    "clean_item_n": 36,
+    "infra_fails": 0,
+    "format_fails": 0,
+    "reasoning_errors": 2,
+    "correct_items": 34,
+    "correct_pairs": 16,
+    "error_tags": {
+      "false_assurance": 1,
+      "false_alarm_perm": 1,
+      "lost_wrong": 1,
+      "rec_wrong": 2
+    },
+    "by_family": {
+      "db": {
+        "accuracy": 0.8333333333333334,
+        "n_pairs": 6,
+        "correct_pairs": 5
+      },
+      "fs": {
+        "accuracy": 0.8333333333333334,
+        "n_pairs": 6,
+        "correct_pairs": 5
+      },
+      "recovery": {
+        "accuracy": 1.0,
+        "n_pairs": 6,
+        "correct_pairs": 6
+      }
+    },
+    "by_hops": {
+      "2": {
+        "accuracy": 1.0,
+        "n_pairs": 5,
+        "correct_pairs": 5
+      },
+      "3": {
+        "accuracy": 0.8181818181818182,
+        "n_pairs": 11,
+        "correct_pairs": 9
+      },
+      "4": {
+        "accuracy": 1.0,
+        "n_pairs": 2,
+        "correct_pairs": 2
+      }
+    }
+  },
+  "glm-5": {
+    "model": "glm-5",
+    "display": "GLM-5",
+    "vendor": "Zhipu",
+    "open_weight": true,
+    "note": "",
+    "complete": true,
+    "n_items": 36,
+    "n_pairs": 18,
+    "pair_accuracy": 0.8888888888888888,
+    "item_accuracy": 0.9444444444444444,
+    "clean_pair_accuracy": 0.8888888888888888,
+    "clean_pair_n": 18,
+    "clean_item_accuracy": 0.9444444444444444,
+    "clean_item_n": 36,
+    "infra_fails": 0,
+    "format_fails": 0,
+    "reasoning_errors": 2,
+    "correct_items": 34,
+    "correct_pairs": 16,
+    "error_tags": {
+      "false_assurance": 0,
+      "false_alarm_perm": 2,
+      "lost_wrong": 2,
+      "rec_wrong": 2
+    },
+    "by_family": {
+      "db": {
+        "accuracy": 0.6666666666666666,
+        "n_pairs": 6,
+        "correct_pairs": 4
+      },
+      "fs": {
+        "accuracy": 1.0,
+        "n_pairs": 6,
+        "correct_pairs": 6
+      },
+      "recovery": {
+        "accuracy": 1.0,
+        "n_pairs": 6,
+        "correct_pairs": 6
+      }
+    },
+    "by_hops": {
+      "2": {
+        "accuracy": 1.0,
+        "n_pairs": 5,
+        "correct_pairs": 5
+      },
+      "3": {
+        "accuracy": 0.8181818181818182,
+        "n_pairs": 11,
+        "correct_pairs": 9
+      },
+      "4": {
+        "accuracy": 1.0,
+        "n_pairs": 2,
+        "correct_pairs": 2
+      }
+    }
+  },
+  "gemma-4-31b-it": {
+    "model": "gemma-4-31b-it",
+    "display": "Gemma 4 31B",
+    "vendor": "Google",
+    "open_weight": true,
+    "note": "",
+    "complete": true,
+    "n_items": 36,
+    "n_pairs": 18,
+    "pair_accuracy": 0.8333333333333334,
+    "item_accuracy": 0.8888888888888888,
+    "clean_pair_accuracy": 0.8333333333333334,
+    "clean_pair_n": 18,
+    "clean_item_accuracy": 0.8888888888888888,
+    "clean_item_n": 36,
+    "infra_fails": 0,
+    "format_fails": 0,
+    "reasoning_errors": 4,
+    "correct_items": 32,
+    "correct_pairs": 15,
+    "error_tags": {
+      "false_assurance": 0,
+      "false_alarm_perm": 2,
+      "lost_wrong": 4,
+      "rec_wrong": 3
+    },
+    "by_family": {
+      "db": {
+        "accuracy": 0.6666666666666666,
+        "n_pairs": 6,
+        "correct_pairs": 4
+      },
+      "fs": {
+        "accuracy": 0.8333333333333334,
+        "n_pairs": 6,
+        "correct_pairs": 5
+      },
+      "recovery": {
+        "accuracy": 1.0,
+        "n_pairs": 6,
+        "correct_pairs": 6
+      }
+    },
+    "by_hops": {
+      "2": {
+        "accuracy": 1.0,
+        "n_pairs": 5,
+        "correct_pairs": 5
+      },
+      "3": {
+        "accuracy": 0.7272727272727273,
+        "n_pairs": 11,
+        "correct_pairs": 8
+      },
+      "4": {
+        "accuracy": 1.0,
+        "n_pairs": 2,
+        "correct_pairs": 2
+      }
+    }
+  },
+  "deepseek-r1-0528": {
+    "model": "deepseek-r1-0528",
+    "display": "DeepSeek R1",
+    "vendor": "DeepSeek",
+    "open_weight": true,
+    "note": "",
+    "complete": true,
+    "n_items": 36,
+    "n_pairs": 18,
+    "pair_accuracy": 0.6666666666666666,
+    "item_accuracy": 0.7777777777777778,
+    "clean_pair_accuracy": 0.6666666666666666,
+    "clean_pair_n": 18,
+    "clean_item_accuracy": 0.7777777777777778,
+    "clean_item_n": 36,
+    "infra_fails": 0,
+    "format_fails": 0,
+    "reasoning_errors": 8,
+    "correct_items": 28,
+    "correct_pairs": 12,
+    "error_tags": {
+      "false_assurance": 2,
+      "false_alarm_perm": 3,
+      "lost_wrong": 7,
+      "rec_wrong": 8
+    },
+    "by_family": {
+      "db": {
+        "accuracy": 0.5,
+        "n_pairs": 6,
+        "correct_pairs": 3
+      },
+      "fs": {
+        "accuracy": 0.6666666666666666,
+        "n_pairs": 6,
+        "correct_pairs": 4
+      },
+      "recovery": {
+        "accuracy": 0.8333333333333334,
+        "n_pairs": 6,
+        "correct_pairs": 5
+      }
+    },
+    "by_hops": {
+      "2": {
+        "accuracy": 1.0,
+        "n_pairs": 5,
+        "correct_pairs": 5
+      },
+      "3": {
+        "accuracy": 0.45454545454545453,
+        "n_pairs": 11,
+        "correct_pairs": 5
+      },
+      "4": {
+        "accuracy": 1.0,
+        "n_pairs": 2,
+        "correct_pairs": 2
+      }
+    }
+  },
+  "qwen3-next-80b-a3b-thinking": {
+    "model": "qwen3-next-80b-a3b-thinking",
+    "display": "Qwen3-Next 80B Thinking",
+    "vendor": "Alibaba",
+    "open_weight": true,
+    "note": "",
+    "complete": true,
+    "n_items": 36,
+    "n_pairs": 18,
+    "pair_accuracy": 0.4444444444444444,
+    "item_accuracy": 0.5833333333333334,
+    "clean_pair_accuracy": 0.6666666666666666,
+    "clean_pair_n": 12,
+    "clean_item_accuracy": 0.8076923076923077,
+    "clean_item_n": 26,
+    "infra_fails": 10,
+    "format_fails": 0,
+    "reasoning_errors": 5,
+    "correct_items": 21,
+    "correct_pairs": 8,
+    "error_tags": {
+      "false_assurance": 2,
+      "false_alarm_perm": 1,
+      "lost_wrong": 3,
+      "rec_wrong": 5
+    },
+    "by_family": {
+      "db": {
+        "accuracy": 0.16666666666666666,
+        "n_pairs": 6,
+        "correct_pairs": 1
+      },
+      "fs": {
+        "accuracy": 0.5,
+        "n_pairs": 6,
+        "correct_pairs": 3
+      },
+      "recovery": {
+        "accuracy": 0.6666666666666666,
+        "n_pairs": 6,
+        "correct_pairs": 4
+      }
+    },
+    "by_hops": {
+      "2": {
+        "accuracy": 0.6,
+        "n_pairs": 5,
+        "correct_pairs": 3
+      },
+      "3": {
+        "accuracy": 0.45454545454545453,
+        "n_pairs": 11,
+        "correct_pairs": 5
+      },
+      "4": {
+        "accuracy": 0.0,
+        "n_pairs": 2,
+        "correct_pairs": 0
+      }
+    }
+  },
+  "gpt-5.4-2026-03-05": {
+    "model": "gpt-5.4-2026-03-05",
+    "display": "GPT-5.4",
+    "vendor": "OpenAI",
+    "open_weight": false,
+    "note": "default settings; 39 s for 36 items suggests no extended reasoning",
+    "complete": true,
+    "n_items": 36,
+    "n_pairs": 18,
+    "pair_accuracy": 0.2222222222222222,
+    "item_accuracy": 0.4444444444444444,
+    "clean_pair_accuracy": 0.2222222222222222,
+    "clean_pair_n": 18,
+    "clean_item_accuracy": 0.4444444444444444,
+    "clean_item_n": 36,
+    "infra_fails": 0,
+    "format_fails": 0,
+    "reasoning_errors": 20,
+    "correct_items": 16,
+    "correct_pairs": 4,
+    "error_tags": {
+      "false_assurance": 5,
+      "false_alarm_perm": 6,
+      "lost_wrong": 12,
+      "rec_wrong": 19
+    },
+    "by_family": {
+      "db": {
+        "accuracy": 0.16666666666666666,
+        "n_pairs": 6,
+        "correct_pairs": 1
+      },
+      "fs": {
+        "accuracy": 0.0,
+        "n_pairs": 6,
+        "correct_pairs": 0
+      },
+      "recovery": {
+        "accuracy": 0.5,
+        "n_pairs": 6,
+        "correct_pairs": 3
+      }
+    },
+    "by_hops": {
+      "2": {
+        "accuracy": 0.2,
+        "n_pairs": 5,
+        "correct_pairs": 1
+      },
+      "3": {
+        "accuracy": 0.18181818181818182,
+        "n_pairs": 11,
+        "correct_pairs": 2
+      },
+      "4": {
+        "accuracy": 0.5,
+        "n_pairs": 2,
+        "correct_pairs": 1
+      }
+    }
+  },
+  "gemini-3.1-flash-lite-preview": {
+    "model": "gemini-3.1-flash-lite-preview",
+    "display": "Gemini 3.1 Flash-Lite",
+    "vendor": "Google",
+    "open_weight": false,
+    "note": "",
+    "complete": true,
+    "n_items": 36,
+    "n_pairs": 18,
+    "pair_accuracy": 0.05555555555555555,
+    "item_accuracy": 0.3055555555555556,
+    "clean_pair_accuracy": 0.05555555555555555,
+    "clean_pair_n": 18,
+    "clean_item_accuracy": 0.3055555555555556,
+    "clean_item_n": 36,
+    "infra_fails": 0,
+    "format_fails": 0,
+    "reasoning_errors": 25,
+    "correct_items": 11,
+    "correct_pairs": 1,
+    "error_tags": {
+      "false_assurance": 6,
+      "false_alarm_perm": 7,
+      "lost_wrong": 14,
+      "rec_wrong": 25
+    },
+    "by_family": {
+      "db": {
+        "accuracy": 0.0,
+        "n_pairs": 6,
+        "correct_pairs": 0
+      },
+      "fs": {
+        "accuracy": 0.0,
+        "n_pairs": 6,
+        "correct_pairs": 0
+      },
+      "recovery": {
+        "accuracy": 0.16666666666666666,
+        "n_pairs": 6,
+        "correct_pairs": 1
+      }
+    },
+    "by_hops": {
+      "2": {
+        "accuracy": 0.0,
+        "n_pairs": 5,
+        "correct_pairs": 0
+      },
+      "3": {
+        "accuracy": 0.09090909090909091,
+        "n_pairs": 11,
+        "correct_pairs": 1
+      },
+      "4": {
+        "accuracy": 0.0,
+        "n_pairs": 2,
+        "correct_pairs": 0
+      }
+    }
+  },
+  "gpt-5.4-nano-2026-03-17": {
+    "model": "gpt-5.4-nano-2026-03-17",
+    "display": "GPT-5.4 nano",
+    "vendor": "OpenAI",
+    "open_weight": false,
+    "note": "",
+    "complete": true,
+    "n_items": 36,
+    "n_pairs": 18,
+    "pair_accuracy": 0.05555555555555555,
+    "item_accuracy": 0.25,
+    "clean_pair_accuracy": 0.05555555555555555,
+    "clean_pair_n": 18,
+    "clean_item_accuracy": 0.25,
+    "clean_item_n": 36,
+    "infra_fails": 0,
+    "format_fails": 1,
+    "reasoning_errors": 26,
+    "correct_items": 9,
+    "correct_pairs": 1,
+    "error_tags": {
+      "false_assurance": 11,
+      "false_alarm_perm": 4,
+      "lost_wrong": 19,
+      "rec_wrong": 24
+    },
+    "by_family": {
+      "db": {
+        "accuracy": 0.0,
+        "n_pairs": 6,
+        "correct_pairs": 0
+      },
+      "fs": {
+        "accuracy": 0.16666666666666666,
+        "n_pairs": 6,
+        "correct_pairs": 1
+      },
+      "recovery": {
+        "accuracy": 0.0,
+        "n_pairs": 6,
+        "correct_pairs": 0
+      }
+    },
+    "by_hops": {
+      "2": {
+        "accuracy": 0.0,
+        "n_pairs": 5,
+        "correct_pairs": 0
+      },
+      "3": {
+        "accuracy": 0.09090909090909091,
+        "n_pairs": 11,
+        "correct_pairs": 1
+      },
+      "4": {
+        "accuracy": 0.0,
+        "n_pairs": 2,
+        "correct_pairs": 0
+      }
+    }
+  }
+}
