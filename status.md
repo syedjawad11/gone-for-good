@@ -24,7 +24,10 @@ SAT 10 OCT:
 - Qwen run 2 (10 Oct, run 4628529): 0.67 pair [0.44,0.89] / 0.75 item, 0 rate limits, 4 empty replies (DB-6B, FS-8A, FS-8B, R-5B).
   Post table uses run 2; run 1 in footnote; both in analysis (models.json stems ...-thinking and ...-thinking-run2). Commit 848b669, pushed.
 - Kaggle task PUBLISHED 10 Oct (Public: True, URL returns 200, backing notebook published too). Post TODO removed (b5768e3).
-NEXT: cover image; Jawad: verify Crane X quotes in browser (now only implied, no direct quote), publish post, then DEV link into README.
+- Post v3 (10 Oct): TL;DR, ### findings + charts (analysis/charts.py, W16 gpt-6-sol -> results/charts/), cover, try-it DB-6 box, Kaggle screenshot docs/kaggle_task.png. Panel (184305) fixes applied.
+  FINDING: kaggle-benchmarks SDK drops temperature unless support_temperature (proxy sets False) -> runs likely at provider default temp; post corrected.
+  FS-5 R4 (symlink 'contents of logs/notes.txt') debatable: alt reading gives Gemini 3 Flash 18/18, DeepSeek/Qwen +1 pair, order unchanged; disclosed.
+NEXT: Jawad rewrites 'What surprised me' in own voice; Kaggle task description (web UI); Jawad: verify Crane X quotes in browser (now only implied, no direct quote), publish post, then DEV link into README.
 
 DONE Fri 9 Oct:
 1. FS-8 fix: prompt now shows `stat -c "%n: %F, %h links" data hold data/ledger.csv hold/ledger.csv` (commits 56b31a7, 0011747). Gold unchanged.

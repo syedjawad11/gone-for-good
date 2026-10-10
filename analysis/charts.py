@@ -90,7 +90,7 @@ def save(fig, path):
 def leaderboard(rows, out):
     fig = canvas("From 18 of 18 pairs to 1 of 18",
                  "Pair accuracy: both variants of a matched pair exactly right",
-                 "18 matched pairs (36 items), one response per item, temperature 0. Scored in Python, no LLM judge.\n"
+                 "18 matched pairs (36 items), one response per item. Scored in Python, no LLM judge.\n"
                  "† default reasoning config  ‡ run 2, 4 empty replies counted wrong")
     ax = chart_axes(fig, rows, bottom=.19)
     percent_axis(ax, 122)
@@ -113,7 +113,7 @@ def leaderboard(rows, out):
 def false_assurance(rows, out):
     total = sum(row["error_tags"]["false_assurance"] for row in rows)
     bottom_three = sum(row["error_tags"]["false_assurance"] for row in rows[-3:])
-    fig = canvas("{} answers said nothing was permanently lost. Data was.".format(total),
+    fig = canvas("{} answers said nothing would be left unrestored. Something was.".format(total),
                  "Answers claiming no permanent loss on the 22 items where the restore script leaves data unrestored",
                  "Bottom three models: {} of {}. Empty or unparseable replies not counted.".format(bottom_three, total))
     ax = chart_axes(fig, rows)
