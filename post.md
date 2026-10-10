@@ -2,7 +2,7 @@
 title: "Gone for Good? I asked 10 models which deleted data could actually be restored"
 published: false
 tags: devchallenge, kagglechallenge, ai, machinelearning
-cover_image: https://raw.githubusercontent.com/syedjawad11/gone-for-good/main/results/charts/cover.png
+cover_image: https://raw.githubusercontent.com/syedjawad11/gone-for-good/5e1ebd22b99a38eea3a8519a05a39e50b502a803/results/charts/cover.png
 ---
 
 *This is a submission for the [Kaggle Benchmarking Challenge](https://dev.to/challenges/kaggle-2026-09-23)*
@@ -76,7 +76,7 @@ Each item got one scored response, with a 16,384-token output cap (dropped if a 
 
 ## Findings
 
-![From 18 of 18 pairs to 1 of 18: pair accuracy per model](https://raw.githubusercontent.com/syedjawad11/gone-for-good/main/results/charts/01_leaderboard.png)
+![From 18 of 18 pairs to 1 of 18: pair accuracy per model](https://raw.githubusercontent.com/syedjawad11/gone-for-good/5e1ebd22b99a38eea3a8519a05a39e50b502a803/results/charts/01_leaderboard.png)
 
 | Model | Open | Pair acc | 95% CI | Item acc | Said "no permanent loss" when there was | Same answer to both variants |
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
@@ -102,23 +102,23 @@ The top five, two of them open-weight, score 83–100%. Gemma 4 31B scores 61 pe
 
 ### 2. The weakest runs answered as if the deciding fact weren't there
 
-![Same answer to both variants, wrong on at least one](https://raw.githubusercontent.com/syedjawad11/gone-for-good/main/results/charts/03_same_answer.png)
+![Same answer to both variants, wrong on at least one](https://raw.githubusercontent.com/syedjawad11/gone-for-good/5e1ebd22b99a38eea3a8519a05a39e50b502a803/results/charts/03_same_answer.png)
 
 The two variants of a pair never share a correct answer, so giving both the same answer is a guaranteed miss. It means the model didn't change its prediction when the one deciding fact changed. GPT-5.4 and Flash-Lite did it in 9 of 18 pairs. The top two models never did.
 
 ### 3. The dangerous error is concentrated
 
-![25 answers said nothing would be left unrestored. Something was.](https://raw.githubusercontent.com/syedjawad11/gone-for-good/main/results/charts/02_false_assurance.png)
+![25 answers said nothing would be left unrestored. Something was.](https://raw.githubusercontent.com/syedjawad11/gone-for-good/5e1ebd22b99a38eea3a8519a05a39e50b502a803/results/charts/02_false_assurance.png)
 
 If you put a model in front of `rm` as a safety check, the error that matters is the one that says "fine". 25 answers claimed no permanent loss when the restore script left data unrestored. GPT-5.4 nano gave 11 of them, half of all such items. The bottom three models gave 22 of the 25. Gemini 3.7 Flash, Gemini 3 Flash, GLM-5, Gemma 4 and Qwen (run 2) gave none. Zero here isn't a safety guarantee on its own: a model that always answered "unsafe" would also score zero.
 
 ### 4. SQLite pairs were the hardest
 
-![SQLite pairs were the hardest: pair accuracy per family](https://raw.githubusercontent.com/syedjawad11/gone-for-good/main/results/charts/04_by_family.png)
+![SQLite pairs were the hardest: pair accuracy per family](https://raw.githubusercontent.com/syedjawad11/gone-for-good/5e1ebd22b99a38eea3a8519a05a39e50b502a803/results/charts/04_by_family.png)
 
 Median pair accuracy across models was 92% on recovery pairs, 75% on filesystem pairs and 58% on SQLite pairs. Among the top five models, all six database item misses were on two pairs: DB-6 (type affinity, above) and DB-9 (whether `BEGIN` comes before the `DELETE` or after a failing `INSERT`).
 
-![Every model on every item](https://raw.githubusercontent.com/syedjawad11/gone-for-good/main/results/charts/05_items_heatmap.png)
+![Every model on every item](https://raw.githubusercontent.com/syedjawad11/gone-for-good/5e1ebd22b99a38eea3a8519a05a39e50b502a803/results/charts/05_items_heatmap.png)
 
 ### 5. A hypothesis that didn't hold
 
@@ -178,7 +178,7 @@ Every deciding fact in this benchmark was visible in the prompt. If an agent is 
 
 **Kaggle benchmark:** https://www.kaggle.com/benchmarks/tasks/syedjawad11/gone-for-good/1
 
-![The public Gone for Good? task on Kaggle](https://raw.githubusercontent.com/syedjawad11/gone-for-good/main/docs/kaggle_task.png)
+![The public Gone for Good? task on Kaggle](https://raw.githubusercontent.com/syedjawad11/gone-for-good/5e1ebd22b99a38eea3a8519a05a39e50b502a803/docs/kaggle_task.png)
 
 **Code, fixtures, gold and analysis:**
 
